@@ -27,6 +27,7 @@ def get_display(db: Session = Depends(get_db)):
     return {
         "hotel_name": get_setting(db, "hotel_name"),
         "logo_url": f"/uploads/{logo}" if logo else "",
+        "logo_size": int(get_setting(db, "logo_size", "96")),
         "qr_url": f"/uploads/{qr}" if qr else "",
         "carousel_interval": int(get_setting(db, "carousel_interval", "5")),
         "images": [f"/uploads/{img.filename}" for img in images],

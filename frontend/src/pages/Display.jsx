@@ -186,7 +186,12 @@ export default function Display() {
           <header className="relative flex items-center justify-between px-10 pt-7 pb-5 shrink-0 border-b border-[#D4AF37]/25">
             <div className="flex items-center gap-4 min-w-0">
               {data.logo_url ? (
-                <img src={data.logo_url} alt="logo" className="h-[72px] w-[72px] object-contain" />
+                <img
+                  src={data.logo_url}
+                  alt="logo"
+                  className="object-contain shrink-0"
+                  style={{ height: data.logo_size || 96, width: data.logo_size || 96 }}
+                />
               ) : (
                 <HotelIcon size={56} className="text-[#D4AF37] shrink-0" />
               )}

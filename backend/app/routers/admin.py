@@ -274,6 +274,7 @@ class SettingsBody(BaseModel):
     carousel_interval: int | None = None
     weather_api_key: str | None = None
     weather_city: str | None = None
+    logo_size: int | None = None
 
 
 @router.get("/settings")
@@ -286,6 +287,7 @@ def get_settings(db: Session = Depends(get_db), _: str = Depends(require_auth)):
         "weather_api_key": get_setting(db, "weather_api_key"),
         "weather_city": get_setting(db, "weather_city"),
         "logo_url": f"/uploads/{logo}" if logo else "",
+        "logo_size": int(get_setting(db, "logo_size", "96")),
         "qr_url": f"/uploads/{qr}" if qr else "",
     }
 
@@ -298,6 +300,10 @@ def update_settings(body: SettingsBody, db: Session = Depends(get_db), _: str = 
         if not 3 <= body.carousel_interval <= 60:
             raise HTTPException(status_code=400, detail="轮播间隔需在 3～60 秒之间")
         set_setting(db, "carousel_interval", str(body.carousel_interval))
+    if body.logo_size is not None:
+        if not 40 <= body.logo_size <= 160:
+            raise HTTPException(status_code=400, detail="LOGO 尺寸需在 40～160 像素之间")
+        set_setting(db, "logo_size", str(body.logo_size))
     if body.weather_api_key is not None:
         set_setting(db, "weather_api_key", body.weather_api_key.strip())
     if body.weather_city is not None:

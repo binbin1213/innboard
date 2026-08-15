@@ -11,6 +11,7 @@ DEFAULT_SETTINGS = {
     "weather_api_key": "",
     "weather_city": "",
     "logo_filename": "",
+    "logo_size": "96",
     "qr_filename": "",
 }
 

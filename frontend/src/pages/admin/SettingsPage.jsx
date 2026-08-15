@@ -24,6 +24,7 @@ export default function SettingsPage() {
         carousel_interval: String(res.carousel_interval),
         weather_api_key: res.weather_api_key,
         weather_city: res.weather_city,
+        logo_size: String(res.logo_size),
       })
       setLogoUrl(res.logo_url)
       setQrUrl(res.qr_url)
@@ -32,14 +33,18 @@ export default function SettingsPage() {
 
   const save = async () => {
     const interval = Number(form.carousel_interval)
+    const logoSize = Number(form.logo_size)
     if (!form.hotel_name.trim()) return setError('酒店名称不能为空')
     if (Number.isNaN(interval) || interval < 3 || interval > 60) {
       return setError('轮播间隔需在 3～60 秒之间')
     }
+    if (Number.isNaN(logoSize) || logoSize < 40 || logoSize > 160) {
+      return setError('LOGO 尺寸需在 40～160 像素之间')
+    }
     setError('')
     setSaving(true)
     try {
-      await api.put('/api/settings', { ...form, carousel_interval: interval }, true)
+      await api.put('/api/settings', { ...form, carousel_interval: interval, logo_size: logoSize }, true)
       setMessage('保存成功，展示页将在 30 秒内自动更新')
       setTimeout(() => setMessage(''), 3000)
     } catch (e) {
@@ -126,7 +131,7 @@ export default function SettingsPage() {
 
       <div className="bg-white rounded-xl shadow p-6 mb-6">
         <h3 className="font-bold mb-4">酒店 LOGO</h3>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-5">
           {logoUrl ? (
             <img src={logoUrl} alt="logo" className="h-16 w-16 object-contain border rounded-lg bg-gray-50 p-1" />
           ) : (
@@ -141,6 +146,35 @@ export default function SettingsPage() {
             上传 LOGO
           </button>
           <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={onLogo} />
+        </div>
+        <label className="block text-sm text-gray-600 mb-1">展示尺寸（像素，40～160）</label>
+        <div className="flex items-center gap-4">
+          <input
+            type="range"
+            min="40"
+            max="160"
+            value={form.logo_size}
+            onChange={(e) => setForm({ ...form, logo_size: e.target.value })}
+            className="flex-1"
+          />
+          <input
+            type="number"
+            min="40"
+            max="160"
+            value={form.logo_size}
+            onChange={(e) => setForm({ ...form, logo_size: e.target.value })}
+            className="w-20 border rounded-lg px-2 py-1"
+          />
+          <span className="text-sm text-gray-500">px</span>
+        </div>
+        <div className="mt-4">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg px-6 py-2 font-medium"
+          >
+            保存设置
+          </button>
         </div>
       </div>
 
