@@ -12,6 +12,14 @@ from .routers import admin, auth, display
 from .seed import seed_data
 from .settings import ensure_defaults
 
+
+class CachedStaticFiles(StaticFiles):
+    def file_response(self, full_path, stat_result, scope, status_code=200):
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
 DIST_DIR = Path(BASE_DIR.parent / "frontend" / "dist")
 
 
@@ -50,7 +58,7 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(display.router)
 
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+app.mount("/uploads", CachedStaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 if DIST_DIR.exists():
     app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
