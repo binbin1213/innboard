@@ -1,0 +1,16 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# 数据与上传（含密码哈希 / 酒店实拍图，不入库）
+backend/data/*.db
+backend/uploads/
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+
+# 系统与本地配置
+.DS_Store
+.claude/

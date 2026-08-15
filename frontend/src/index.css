@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}
+
+/* 防烧屏：静态区域缓慢微小位移 */
+@keyframes burnin-shift {
+  0%, 40% { transform: translate(0, 0); }
+  50%, 90% { transform: translate(2px, 2px); }
+  100% { transform: translate(0, 0); }
+}
+
+.burnin-shift {
+  animation: burnin-shift 240s linear infinite;
+}
+
+/* 秒针呼吸：每秒重新淡入 */
+@keyframes sec-fade {
+  0% { opacity: 0.35; }
+  100% { opacity: 1; }
+}
+
+.animate-sec-fade {
+  animation: sec-fade 1s ease-out;
+}
+
+/* 价格变动金色闪烁 */
+@keyframes price-flash {
+  0% { color: #A1804A; text-shadow: 0 0 24px rgba(161, 128, 74, 0.5); }
+  100% { color: inherit; text-shadow: none; }
+}
+
+.price-flash {
+  animation: price-flash 2.5s ease-out;
+}
