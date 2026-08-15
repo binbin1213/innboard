@@ -114,7 +114,7 @@ def update_room(room_id: int, body: RoomUpdate, db: Session = Depends(get_db), _
         room.member_price = body.member_price
     if body.description is not None:
         room.description = body.description.strip()
-    if body.remaining_rooms is not None:
+    if "remaining_rooms" in body.model_fields_set:
         room.remaining_rooms = body.remaining_rooms
     if room.rack_price != old_rack or room.member_price != old_member:
         db.add(
