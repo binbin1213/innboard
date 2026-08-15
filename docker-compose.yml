@@ -1,0 +1,13 @@
+services:
+  innboard:
+    build: .
+    image: binbin1213/innboard:latest
+    container_name: innboard
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/backend/data
+      - ./uploads:/app/backend/uploads
+    environment:
+      - TZ=Asia/Shanghai
