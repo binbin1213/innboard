@@ -38,40 +38,40 @@ function RoomCard({ room, flashed }) {
   const Icon = roomIcon(room.name)
   const saving = room.rack_price - room.member_price
   return (
-    <div className="flex items-center justify-between rounded-xl border border-[#211F1B]/10 bg-white/50 backdrop-blur-sm px-8 py-4">
+    <div className="flex items-center justify-between rounded-xl border border-[#E8C872]/15 bg-[#E8C872]/[0.03] backdrop-blur-sm px-8 py-4">
       <div className="flex items-center gap-5 min-w-0">
-        <Icon size={40} className="text-[#334B42] shrink-0" />
+        <Icon size={40} className="text-[#E8C872] shrink-0" />
         <div className="min-w-0">
           <div className="text-[32px] leading-tight">{room.name}</div>
           {room.description && (
-            <div className="text-[21px] text-[#211F1B]/50 mt-1">
+            <div className="text-[21px] text-gray-400 mt-1">
               {room.description}
               {room.remaining_rooms != null && room.remaining_rooms > 0 && (
-                <span className="text-[#A1804A] ml-4">仅剩 {room.remaining_rooms} 间</span>
+                <span className="text-red-400 ml-4">仅剩 {room.remaining_rooms} 间</span>
               )}
             </div>
           )}
         </div>
       </div>
       {room.sold_out ? (
-        <span className="text-[38px] font-bold text-[#B05A45]">满房</span>
+        <span className="text-[38px] font-bold text-red-400">满房</span>
       ) : (
         <div className="flex items-center gap-4 shrink-0">
-          <span className="text-[24px] text-[#211F1B]/40 line-through tabular-nums">
+          <span className="text-[24px] text-gray-500 line-through tabular-nums">
             ¥{formatPrice(room.rack_price)}
           </span>
-          <span className="text-[21px] px-3.5 py-1 rounded-full bg-[#334B42] text-white font-semibold">
+          <span className="text-[21px] px-3.5 py-1 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#E8C872] text-[#1a1405] font-semibold">
             会员专享
           </span>
           <span
-            className={`text-[56px] font-bold text-[#334B42] tabular-nums leading-none ${
+            className={`text-[56px] font-bold text-[#E8C872] tabular-nums leading-none ${
               flashed ? 'price-flash' : ''
             }`}
           >
             ¥{formatPrice(room.member_price)}
           </span>
           {saving > 0 && (
-            <span className="text-[20px] px-3 py-1 rounded-full bg-[#A1804A] text-white font-semibold">
+            <span className="text-[20px] px-3 py-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold">
               省 ¥{formatPrice(saving)}
             </span>
           )}
@@ -158,7 +158,7 @@ export default function Display() {
   }, [images, interval])
 
   if (!data) {
-    return <div className="h-screen w-screen bg-[#EBE6DC]" />
+    return <div className="h-screen w-screen bg-black" />
   }
 
   const dateText = now.toLocaleDateString('zh-CN', {
@@ -176,46 +176,46 @@ export default function Display() {
   const WeatherGlyph = data.weather ? WEATHER_ICONS[data.weather.cat] || CloudIcon : null
 
   return (
-    <div className="h-screen w-screen bg-[#EBE6DC] flex items-center justify-center overflow-hidden">
+    <div className="h-screen w-screen bg-black flex items-center justify-center overflow-hidden">
       <div
-        className="relative shrink-0 bg-gradient-to-b from-[#FBF9F5] via-[#F6F4F0] to-[#F1ECE3] text-[#211F1B] overflow-hidden select-none"
+        className="relative shrink-0 bg-gradient-to-b from-[#080f1c] via-[#0b1220] to-[#141f36] text-white overflow-hidden select-none"
         style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})` }}
       >
         <div className="relative flex flex-col h-full">
           {/* 顶部：酒店名 + 天气（居中）+ 时间 */}
-          <header className="relative flex items-center justify-between px-10 pt-7 pb-5 shrink-0 border-b border-[#211F1B]/10">
+          <header className="relative flex items-center justify-between px-10 pt-7 pb-5 shrink-0 border-b border-[#D4AF37]/25">
             <div className="flex items-center gap-4 min-w-0">
               {data.logo_url ? (
                 <img src={data.logo_url} alt="logo" className="h-[72px] w-[72px] object-contain" />
               ) : (
-                <HotelIcon size={56} className="text-[#334B42] shrink-0" />
+                <HotelIcon size={56} className="text-[#D4AF37] shrink-0" />
               )}
-              <h1 className="text-[46px] font-bold tracking-wider text-[#334B42] truncate">
+              <h1 className="text-[46px] font-bold tracking-wider text-[#D4AF37] truncate">
                 {data.hotel_name}
               </h1>
             </div>
             {data.weather_city && (
               <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
-                <span className="text-[28px] text-[#211F1B]/60">{data.weather_city}</span>
+                <span className="text-[28px] text-gray-200">{data.weather_city}</span>
                 {data.weather ? (
                   <>
-                    <WeatherGlyph size={40} className="text-[#334B42]" />
-                    <span className="text-[34px] font-medium text-[#334B42]">
+                    <WeatherGlyph size={40} className="text-[#E8C872]" />
+                    <span className="text-[34px] font-medium text-[#E8C872]">
                       {data.weather.text} {data.weather.temp}℃
                     </span>
                   </>
                 ) : (
-                  <span className="text-[24px] text-[#211F1B]/40">天气未配置</span>
+                  <span className="text-[24px] text-gray-500">天气未配置</span>
                 )}
               </div>
             )}
             <div className="flex flex-col items-end shrink-0">
-              <div className="text-[26px] text-[#211F1B]/60">
+              <div className="text-[26px] text-gray-300">
                 {dateText} {weekdayText}
               </div>
               <div className="text-[72px] font-bold leading-tight tabular-nums">
                 {hhmm}
-                <span key={ss} className="animate-sec-fade text-[#A1804A]">
+                <span key={ss} className="animate-sec-fade text-[#E8C872]">
                   :{ss}
                 </span>
               </div>
@@ -223,12 +223,12 @@ export default function Display() {
           </header>
 
           {/* 横版图片轮播（16:9 条幅） */}
-          <div className="relative mx-10 mt-5 h-[565px] shrink-0 rounded-2xl overflow-hidden bg-[#EFEBE2]">
+          <div className="relative mx-10 mt-5 h-[565px] shrink-0 rounded-2xl overflow-hidden bg-[#111a2e]">
             {images.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="text-[48px] text-[#334B42] font-bold">{data.hotel_name}</div>
-                  <div className="text-[28px] text-[#211F1B]/40 mt-4">请在管理后台上传宣传图片</div>
+                  <div className="text-[48px] text-[#D4AF37] font-bold">{data.hotel_name}</div>
+                  <div className="text-[28px] text-gray-400 mt-4">请在管理后台上传宣传图片</div>
                 </div>
               </div>
             ) : (
@@ -251,16 +251,16 @@ export default function Display() {
             <div className="flex-1 min-h-0 flex flex-col justify-center">
               <div className="shrink-0 pb-3 relative flex flex-col items-center">
                 <div className="flex items-center gap-5">
-                  <div className="h-[2px] w-52 bg-gradient-to-l from-[#334B42]/40 to-transparent" />
-                  <div className="w-2 h-2 rotate-45 bg-[#334B42]/50 shrink-0" />
-                  <h2 className="text-[52px] font-bold text-[#334B42] leading-none tracking-[0.3em] pl-[0.3em]">
+                  <div className="h-[2px] w-52 bg-gradient-to-l from-[#D4AF37]/60 to-transparent" />
+                  <div className="w-2 h-2 rotate-45 bg-[#D4AF37]/70 shrink-0" />
+                  <h2 className="text-[52px] font-bold text-[#D4AF37] leading-none tracking-[0.3em] pl-[0.3em]">
                     今日房价
                   </h2>
-                  <div className="w-2 h-2 rotate-45 bg-[#334B42]/50 shrink-0" />
-                  <div className="h-[2px] w-52 bg-gradient-to-r from-[#334B42]/40 to-transparent" />
+                  <div className="w-2 h-2 rotate-45 bg-[#D4AF37]/70 shrink-0" />
+                  <div className="h-[2px] w-52 bg-gradient-to-r from-[#D4AF37]/60 to-transparent" />
                 </div>
-                <div className="absolute right-0 bottom-1 flex items-center gap-3 text-[20px] text-[#211F1B]/40">
-                  {offline && <span className="text-[#B05A45]">网络中断，显示缓存数据</span>}
+                <div className="absolute right-0 bottom-1 flex items-center gap-3 text-[20px] text-gray-500">
+                  {offline && <span className="text-red-400">网络中断，显示缓存数据</span>}
                   <span>更新时间 {lastFetchText}</span>
                 </div>
               </div>
@@ -275,15 +275,15 @@ export default function Display() {
 
           {/* 公告条 + 二维码 */}
           <footer className="burnin-shift shrink-0 px-10 pb-6 pt-2">
-            <div className="flex items-center gap-8 border-t border-[#211F1B]/10 pt-4">
+            <div className="flex items-center gap-8 border-t border-[#E8C872]/15 pt-4">
               <div className="flex-1 flex items-center justify-around">
                 {data.announcements.map((text, i) => {
                   const AIcon = announcementIcon(text)
                   return (
                     <Fragment key={text}>
-                      {i > 0 && <div className="h-10 w-px bg-[#211F1B]/10" />}
-                      <div className="flex items-center gap-3 text-[24px] text-[#211F1B]/70">
-                        <AIcon size={30} className="text-[#334B42] shrink-0" />
+                      {i > 0 && <div className="h-10 w-px bg-[#E8C872]/15" />}
+                      <div className="flex items-center gap-3 text-[24px] text-gray-300">
+                        <AIcon size={30} className="text-[#E8C872] shrink-0" />
                         <span>{text}</span>
                       </div>
                     </Fragment>
@@ -297,7 +297,7 @@ export default function Display() {
                     alt="二维码"
                     className="h-[130px] w-[130px] rounded-lg bg-white p-1.5 object-contain"
                   />
-                  <span className="text-[20px] text-[#334B42] mt-1.5">扫码订房</span>
+                  <span className="text-[20px] text-[#E8C872] mt-1.5">扫码订房</span>
                 </div>
               )}
             </div>
