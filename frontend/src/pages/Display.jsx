@@ -173,11 +173,7 @@ export default function Display() {
     return <div className="h-full w-full bg-black" />
   }
 
-  const dateText = now.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  const dateText = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
   const weekdayText = now.toLocaleDateString('zh-CN', { weekday: 'long' })
   const timeParts = now.toLocaleTimeString('zh-CN', { hour12: false }).split(':')
   const hhmm = `${timeParts[0]}:${timeParts[1]}`
@@ -200,7 +196,8 @@ export default function Display() {
 
           <div className="relative flex flex-col h-full">
             {/* 顶部：酒店名 + 天气（居中）+ 时间 */}
-            <header className="relative flex items-center justify-between px-10 pt-10 pb-5 shrink-0 border-b border-[#D4AF37]/25">
+            <header className="flex flex-col px-10 pt-10 pb-5 shrink-0 border-b border-[#D4AF37]/25 gap-5">
+              {/* 品牌行：logo + 酒店名 */}
               <div className="flex items-center gap-4 min-w-0">
                 {data.logo_url ? (
                   <img
@@ -216,36 +213,38 @@ export default function Display() {
                   {data.hotel_name}
                 </h1>
               </div>
-              {data.weather_city && (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                  <div className="flex items-center gap-3">
-                    {data.weather && (
-                      <WeatherGlyph
-                        size={56}
-                        className="weather-glyph shrink-0"
-                        style={{ animation: WEATHER_ANIM[data.weather.cat] }}
-                      />
-                    )}
+              {/* 信息行：左侧天气，右侧日期+时间 */}
+              <div className="flex items-center">
+                {data.weather_city && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[24px] text-gray-300">{data.weather_city}</span>
+                    <span className="text-[24px] text-gray-400">·</span>
                     {data.weather ? (
-                      <span className="text-[26px] font-medium text-[#E8C872] leading-none">
-                        {data.weather.text} {data.weather.temp}℃
-                      </span>
+                      <>
+                        <WeatherGlyph
+                          size={36}
+                          className="weather-glyph shrink-0"
+                          style={{ animation: WEATHER_ANIM[data.weather.cat] }}
+                        />
+                        <span className="text-[24px] font-medium text-[#E8C872]">
+                          {data.weather.text} {data.weather.temp}℃
+                        </span>
+                      </>
                     ) : (
-                      <span className="text-[20px] text-gray-500 leading-none">天气未配置</span>
+                      <span className="text-[22px] text-gray-500">天气未配置</span>
                     )}
                   </div>
-                  <span className="text-[22px] text-gray-300 leading-none mt-2">{data.weather_city}</span>
-                </div>
-              )}
-              <div className="flex flex-col items-end shrink-0">
-                <div className="text-[22px] text-gray-300">
-                  {dateText} {weekdayText}
-                </div>
-                <div className="text-[48px] font-bold leading-tight tabular-nums">
-                  {hhmm}
-                  <span key={ss} className="animate-sec-fade text-[#E8C872]">
-                    :{ss}
-                  </span>
+                )}
+                <div className="ml-auto flex flex-col items-end shrink-0">
+                  <div className="text-[22px] text-gray-300">
+                    {dateText} {weekdayText}
+                  </div>
+                  <div className="text-[48px] font-bold leading-tight tabular-nums">
+                    {hhmm}
+                    <span key={ss} className="animate-sec-fade text-[#E8C872]">
+                      :{ss}
+                    </span>
+                  </div>
                 </div>
               </div>
             </header>
