@@ -203,24 +203,12 @@ export default function Display() {
             <header className="relative flex items-center justify-between px-10 pt-10 pb-5 shrink-0 border-b border-[#D4AF37]/25">
               <div className="flex items-center gap-4 min-w-0">
                 {data.logo_url ? (
-                  <div
-                    className="shrink-0 flex items-center justify-center rounded-2xl"
-                    style={{
-                      width: (data.logo_size || 96) + 28,
-                      height: (data.logo_size || 96) + 28,
-                      background:
-                        'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.18), rgba(255,255,255,0.04) 75%)',
-                      border: '1px solid rgba(212,175,55,0.4)',
-                      boxShadow: '0 0 26px rgba(212,175,55,0.22), inset 0 0 18px rgba(255,255,255,0.05)',
-                    }}
-                  >
-                    <img
-                      src={data.logo_url}
-                      alt="logo"
-                      className="object-contain"
-                      style={{ height: data.logo_size || 96, width: data.logo_size || 96 }}
-                    />
-                  </div>
+                  <img
+                    src={data.logo_url}
+                    alt="logo"
+                    className="object-contain shrink-0"
+                    style={{ height: data.logo_size || 96, width: data.logo_size || 96 }}
+                  />
                 ) : (
                   <HotelIcon size={56} className="text-[#D4AF37] shrink-0" />
                 )}
@@ -229,21 +217,21 @@ export default function Display() {
                 </h1>
               </div>
               {data.weather_city && (
-                <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
-                  <span className="text-[24px] text-gray-300">{data.weather_city}</span>
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
+                  {data.weather && (
+                    <WeatherGlyph
+                      size={56}
+                      className="text-[#E8C872] weather-glyph"
+                      style={{ animation: WEATHER_ANIM[data.weather.cat] }}
+                    />
+                  )}
+                  <span className="text-[22px] text-gray-300 leading-none">{data.weather_city}</span>
                   {data.weather ? (
-                    <>
-                      <WeatherGlyph
-                        size={30}
-                        className="text-[#E8C872] weather-glyph"
-                        style={{ animation: WEATHER_ANIM[data.weather.cat] }}
-                      />
-                      <span className="text-[28px] font-medium text-[#E8C872]">
-                        {data.weather.text} {data.weather.temp}℃
-                      </span>
-                    </>
+                    <span className="text-[26px] font-medium text-[#E8C872] leading-none">
+                      {data.weather.text} {data.weather.temp}℃
+                    </span>
                   ) : (
-                    <span className="text-[20px] text-gray-500">天气未配置</span>
+                    <span className="text-[20px] text-gray-500 leading-none">天气未配置</span>
                   )}
                 </div>
               )}
