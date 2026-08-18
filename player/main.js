@@ -97,6 +97,11 @@ function openDisplay() {
     },
   });
 
+  // 去掉 UA 中的 Electron 标识，避免被 Cloudflare 当作爬虫触发人机验证
+  displayWin.webContents.setUserAgent(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+  );
+
   displayWin.loadURL(url);
 
   displayWin.once('ready-to-show', () => {
@@ -167,11 +172,17 @@ function registerIpc() {
   ipcMain.handle('stop', () => ({ ok: closeDisplay() }));
   ipcMain.handle('refresh', () => {
     const base = normalizeBaseUrl(loadConfig().serverUrl);
-    if (displayWin && !displayWin.isDestroyed() && base) {
-      displayWin.loadURL(base + '/display');
-      return { ok: true };
+    if (!displayWin || displayWin.isDestroyed() || !base) {
+      return { ok: false, msg: '当前没有在播放' };
     }
-    return { ok: false, msg: '当前没有在播放' };
+    const displayUrl = base + '/display';
+    const current = displayWin.webContents.getURL();
+    if (current && current.startsWith(displayUrl)) {
+      displayWin.webContents.reloadIgnoringCache();
+    } else {
+      displayWin.loadURL(displayUrl);
+    }
+    return { ok: true };
   });
   ipcMain.handle('open-admin', () => {
     const base = normalizeBaseUrl(loadConfig().serverUrl);
