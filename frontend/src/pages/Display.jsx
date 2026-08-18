@@ -225,7 +225,7 @@ export default function Display() {
                       style={{ animation: WEATHER_ANIM[data.weather.cat] }}
                     />
                   )}
-                  <div className="flex flex-col items-start">
+                  <div className="flex flex-col items-center">
                     {data.weather ? (
                       <span className="text-[26px] font-medium text-[#E8C872] leading-none">
                         {data.weather.text} {data.weather.temp}℃
