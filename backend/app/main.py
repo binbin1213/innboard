@@ -23,6 +23,13 @@ class CachedStaticFiles(StaticFiles):
 DIST_DIR = Path(BASE_DIR.parent / "frontend" / "dist")
 
 
+def no_cache_response(path: Path) -> FileResponse:
+    """HTML 与 sw.js 需每次向源站校验，避免被 Cloudflare 缓存旧页面。"""
+    response = FileResponse(path)
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 def migrate():
     with engine.begin() as conn:
         cols = {row[1] for row in conn.execute(text("PRAGMA table_info(rooms)"))}
@@ -85,14 +92,14 @@ app.include_router(display.router)
 app.mount("/uploads", CachedStaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 if DIST_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
+    app.mount("/assets", CachedStaticFiles(directory=DIST_DIR / "assets"), name="assets")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str):
         candidate = DIST_DIR / full_path
         if full_path and candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(DIST_DIR / "index.html")
+            return no_cache_response(candidate)
+        return no_cache_response(DIST_DIR / "index.html")
 
 else:
 
