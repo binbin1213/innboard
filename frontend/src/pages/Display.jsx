@@ -1,8 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import {
-  WEATHER_ICONS,
-  CloudIcon,
   BedIcon,
   TwinIcon,
   FamilyIcon,
@@ -19,15 +17,6 @@ const POLL_MS = 30_000
 // 电视过扫描安全间距(px)：电视机会对边缘做 5%-8% 放大切边，
 // 外层留出安全 padding，保证核心文字(时间/日期/公告)在放大后仍在可视区
 const SAFE_PAD = 48
-
-// 天气图标动画（按天气类别，轻量 CSS 动画；雨/雪的下落动画在图标内部用 SMIL 实现）
-const WEATHER_ANIM = {
-  sunny: 'w-spin 24s linear infinite',
-  cloudy: 'w-float 4s ease-in-out infinite',
-  overcast: 'w-float 5s ease-in-out infinite',
-  storm: 'w-flicker 2.5s ease-in-out infinite',
-  fog: 'w-float 6s ease-in-out infinite',
-}
 
 function formatPrice(price) {
   return Number.isInteger(price) ? String(price) : price.toFixed(1)
@@ -173,12 +162,10 @@ export default function Display() {
     return <div className="h-full w-full bg-black" />
   }
 
-  const dateText = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
+  const dateText = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`
   const weekdayText = now.toLocaleDateString('zh-CN', { weekday: 'long' })
   const timeParts = now.toLocaleTimeString('zh-CN', { hour12: false }).split(':')
   const hhmm = `${timeParts[0]}:${timeParts[1]}`
-  const ss = timeParts[2] || '00'
-  const WeatherGlyph = data.weather ? WEATHER_ICONS[data.weather.cat] || CloudIcon : null
 
   return (
     <div
@@ -195,56 +182,88 @@ export default function Display() {
           <div className="absolute top-0 left-0 right-0 h-44 bg-gradient-to-b from-black/60 via-black/25 to-transparent pointer-events-none z-20" />
 
           <div className="relative flex flex-col h-full">
-            {/* 顶部：酒店名 + 天气（居中）+ 时间 */}
-            <header className="flex flex-col px-10 pt-10 pb-5 shrink-0 border-b border-[#D4AF37]/25 gap-5">
-              {/* 品牌行：logo + 酒店名 */}
-              <div className="flex items-center gap-4 min-w-0">
+            {/* 顶部信息栏（方案A：品牌 | 天气 | 时间） */}
+            <header
+              className="shrink-0 flex items-center justify-between"
+              style={{
+                height: 124,
+                paddingLeft: 40,
+                paddingRight: 50,
+                background:
+                  'linear-gradient(90deg, #020B18 0%, #04152B 40%, #061B34 70%, #020B18 100%)',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              {/* 品牌区：Logo + 酒店名称 */}
+              <div className="flex items-center gap-6 min-w-0">
                 {data.logo_url ? (
                   <img
                     src={data.logo_url}
                     alt="logo"
                     className="object-contain shrink-0"
-                    style={{ height: data.logo_size || 96, width: data.logo_size || 96 }}
+                    style={{ height: 68, opacity: 0.9 }}
                   />
                 ) : (
-                  <HotelIcon size={56} className="text-[#D4AF37] shrink-0" />
+                  <HotelIcon size={68} className="text-[#D8B56A] shrink-0" />
                 )}
-                <h1 className="text-[58px] font-bold tracking-wider text-[#D4AF37] truncate">
-                  {data.hotel_name}
-                </h1>
+                <div className="flex flex-col justify-center min-w-0">
+                  <h1
+                    className="truncate leading-none"
+                    style={{
+                      fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
+                      fontWeight: 700,
+                      fontSize: 42,
+                      color: '#D8B56A',
+                      letterSpacing: 2,
+                    }}
+                  >
+                    {data.hotel_name}
+                  </h1>
+                  <div
+                    className="leading-none mt-3"
+                    style={{
+                      fontSize: 13,
+                      color: 'rgba(216,181,106,0.9)',
+                      letterSpacing: 3,
+                    }}
+                  >
+                    BIWY HOTEL
+                  </div>
+                </div>
               </div>
-              {/* 信息行：左侧天气，右侧日期+时间 */}
-              <div className="flex items-center">
-                {data.weather_city && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[24px] text-gray-300">{data.weather_city}</span>
-                    <span className="text-[24px] text-gray-400">·</span>
-                    {data.weather ? (
-                      <>
-                        <WeatherGlyph
-                          size={36}
-                          className="weather-glyph shrink-0"
-                          style={{ animation: WEATHER_ANIM[data.weather.cat] }}
-                        />
-                        <span className="text-[24px] font-medium text-[#E8C872]">
-                          {data.weather.text} {data.weather.temp}℃
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-[22px] text-gray-500">天气未配置</span>
-                    )}
-                  </div>
-                )}
-                <div className="ml-auto flex flex-col items-end shrink-0">
-                  <div className="text-[22px] text-gray-300">
-                    {dateText} {weekdayText}
-                  </div>
-                  <div className="text-[48px] font-bold leading-tight tabular-nums">
-                    {hhmm}
-                    <span key={ss} className="animate-sec-fade text-[#E8C872]">
-                      :{ss}
-                    </span>
-                  </div>
+
+              {/* 中间分隔线 + 天气 */}
+              <div className="flex items-center gap-8">
+                <div style={{ width: 1, height: 51, background: 'rgba(255,255,255,0.25)' }} />
+                <div
+                  style={{
+                    fontSize: 19,
+                    color: 'rgba(255,255,255,0.9)',
+                    letterSpacing: 1,
+                    textAlign: 'center',
+                  }}
+                >
+                  {data.weather_city && data.weather
+                    ? `${data.weather_city} · ${data.weather.text} ${data.weather.temp}℃`
+                    : data.weather_city || ''}
+                </div>
+              </div>
+
+              {/* 时间区：日期 + 时间（无秒） */}
+              <div className="flex flex-col items-end shrink-0">
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
+                  {dateText} {weekdayText}
+                </div>
+                <div
+                  className="font-bold leading-tight tabular-nums"
+                  style={{
+                    fontFamily: '"DIN", "DIN Alternate", "Roboto", sans-serif',
+                    fontWeight: 700,
+                    fontSize: 54,
+                    color: '#FFFFFF',
+                  }}
+                >
+                  {hhmm}
                 </div>
               </div>
             </header>
