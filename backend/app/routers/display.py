@@ -45,5 +45,5 @@ def get_display(db: Session = Depends(get_db)):
         "announcements": [a.text for a in announcements],
         "weather_city": get_setting(db, "weather_city"),
         "weather": weather,
-        "server_time": datetime.now().isoformat(),
+        "server_time": datetime.now().astimezone().isoformat(),
     }

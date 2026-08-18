@@ -47,6 +47,30 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="酒店智能房价牌", lifespan=lifespan)
 
+class NoStoreMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        path = scope.get("path", "")
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start" and path.startswith("/api/"):
+                headers = [(k, v) for k, v in message.get("headers", []) if k.lower() != b"cache-control"]
+                headers.append((b"cache-control", b"no-store"))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
+
+
+app.add_middleware(NoStoreMiddleware)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
