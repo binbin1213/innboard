@@ -194,12 +194,24 @@ export default function Display() {
             <header className="relative flex items-center justify-between px-10 pt-10 pb-5 shrink-0 border-b border-[#D4AF37]/25">
               <div className="flex items-center gap-4 min-w-0">
                 {data.logo_url ? (
-                  <img
-                    src={data.logo_url}
-                    alt="logo"
-                    className="object-contain shrink-0"
-                    style={{ height: data.logo_size || 96, width: data.logo_size || 96 }}
-                  />
+                  <div
+                    className="shrink-0 flex items-center justify-center rounded-2xl"
+                    style={{
+                      width: (data.logo_size || 96) + 28,
+                      height: (data.logo_size || 96) + 28,
+                      background:
+                        'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.18), rgba(255,255,255,0.04) 75%)',
+                      border: '1px solid rgba(212,175,55,0.4)',
+                      boxShadow: '0 0 26px rgba(212,175,55,0.22), inset 0 0 18px rgba(255,255,255,0.05)',
+                    }}
+                  >
+                    <img
+                      src={data.logo_url}
+                      alt="logo"
+                      className="object-contain"
+                      style={{ height: data.logo_size || 96, width: data.logo_size || 96 }}
+                    />
+                  </div>
                 ) : (
                   <HotelIcon size={56} className="text-[#D4AF37] shrink-0" />
                 )}
