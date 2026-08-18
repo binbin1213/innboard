@@ -1,0 +1,16 @@
+{
+  "name": "innboard-player",
+  "productName": "房价牌播放器",
+  "version": "1.0.0",
+  "description": "酒店智能房价牌 Windows 播放器（Win7 64 位可用）",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:win": "bash build-win.sh"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-packager": "^17.1.2"
+  }
+}

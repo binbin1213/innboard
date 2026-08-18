@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline';" />
+  <title>房价牌播放器</title>
+  <style>
+    :root {
+      --gold: #d4af37;
+      --gold-dim: #8a7330;
+      --bg: #121212;
+      --panel: #1c1c1c;
+      --line: #2e2e2e;
+      --text: #f2efe6;
+      --muted: #9a968c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: linear-gradient(160deg, #16130c 0%, #0c0c0c 60%);
+      color: var(--text);
+      padding: 26px 24px;
+      -webkit-user-select: none;
+      user-select: none;
+      height: 100vh;
+      overflow: hidden;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h1::before {
+      content: "";
+      width: 6px; height: 22px;
+      background: linear-gradient(var(--gold), var(--gold-dim));
+      border-radius: 3px;
+    }
+    .sub { color: var(--muted); font-size: 12px; margin: 6px 0 20px 16px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .label { font-size: 13px; color: var(--muted); margin-bottom: 8px; display: block; }
+    .row { display: flex; gap: 8px; }
+    input {
+      flex: 1;
+      background: #0f0f0f;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus { border-color: var(--gold-dim); }
+    button {
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      transition: transform .06s ease, filter .15s ease;
+    }
+    button:active { transform: scale(.97); }
+    .btn-plain {
+      background: #2a2a2a;
+      color: var(--text);
+      padding: 9px 16px;
+    }
+    .btn-plain:hover { background: #333; }
+    .btn-gold {
+      background: linear-gradient(160deg, #e8c96a, var(--gold-dim));
+      color: #1a1405;
+      font-weight: 700;
+    }
+    .big-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .big {
+      padding: 18px 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      border-radius: 12px;
+    }
+    .play { background: linear-gradient(160deg, #37b36b, #1f7a44); color: #04180c; }
+    .stop { background: linear-gradient(160deg, #e05c5c, #8e2f2f); color: #1c0505; }
+    .secondary { width: 100%; padding: 12px 0; }
+    .status {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+      min-height: 58px;
+      border-left: 3px solid var(--gold-dim);
+      padding-left: 12px;
+    }
+    .status b { color: var(--gold); font-weight: 600; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>房价牌播放器</h1>
+  <div class="sub">酒店智能房价牌 · 电视竖屏展示端</div>
+
+  <div class="card">
+    <label class="label">服务器地址（不要带 /display）</label>
+    <div class="row">
+      <input id="url" type="text" placeholder="https://hotel.binbino.cn" />
+      <button class="btn-plain" id="save">保存</button>
+    </div>
+    <div class="hint">改房价 / 图片 / 公告：点下方「打开管理后台」。</div>
+  </div>
+
+  <div class="card">
+    <label class="label">电视播放</label>
+    <div class="big-row">
+      <button class="big play" id="play">▶ 播放</button>
+      <button class="big stop" id="stop">■ 停止</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <button class="secondary btn-gold" id="admin">打开管理后台（浏览器）</button>
+  </div>
+
+  <div class="card">
+    <label class="label">状态</label>
+    <div class="status" id="status">正在检测屏幕…</div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const $url = document.getElementById('url');
+    const $save = document.getElementById('save');
+    const $play = document.getElementById('play');
+    const $stop = document.getElementById('stop');
+    const $admin = document.getElementById('admin');
+    const $status = document.getElementById('status');
+
+    function setStatus(html) {
+      $status.innerHTML = html;
+    }
+
+    async function refreshDisplays() {
+      try {
+        const displays = await ipcRenderer.invoke('get-displays');
+        const primary = displays.find((d) => d.primary);
+        const others = displays.filter((d) => !d.primary);
+        let html = `共检测到 <b>${displays.length}</b> 块屏幕<br>`;
+        if (others.length > 0) {
+          const tv = others[0];
+          html += `将在第 2 块屏（<b>${tv.width}×${tv.height}</b>）全屏播放`;
+        } else {
+          html += '只检测到一块屏幕，将直接全屏播放（请确认 HDMI 电视已连接并设为竖屏）';
+        }
+        setStatus(html);
+      } catch (e) {
+        setStatus('无法读取屏幕信息');
+      }
+    }
+
+    async function init() {
+      const cfg = await ipcRenderer.invoke('get-config');
+      $url.value = cfg.serverUrl || '';
+      await refreshDisplays();
+    }
+
+    $save.addEventListener('click', async () => {
+      const r = await ipcRenderer.invoke('save-config', { serverUrl: $url.value.trim() });
+      setStatus(r.ok ? '✅ 地址已保存' : '❌ 保存失败');
+    });
+
+    $play.addEventListener('click', async () => {
+      const r = await ipcRenderer.invoke('play');
+      if (r && r.ok) {
+        setStatus(`▶ 正在电视全屏播放<br>地址：<b>${r.url}</b>`);
+      } else {
+        setStatus(`❌ ${(r && r.msg) || '播放失败'}`);
+      }
+    });
+
+    $stop.addEventListener('click', async () => {
+      await ipcRenderer.invoke('stop');
+      setStatus('⏸ 已停止播放');
+    });
+
+    $admin.addEventListener('click', async () => {
+      const r = await ipcRenderer.invoke('open-admin');
+      if (r && !r.ok) setStatus(`❌ ${r.msg || '无法打开管理后台'}`);
+    });
+
+    init();
+  </script>
+</body>
+</html>
