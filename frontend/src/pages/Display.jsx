@@ -184,9 +184,9 @@ export default function Display() {
           <div className="relative flex flex-col h-full">
             {/* 顶部信息栏（方案A：品牌 | 天气 | 时间） */}
             <header
-              className="shrink-0 flex items-center justify-between"
+              className="shrink-0 flex items-center"
               style={{
-                height: 140,
+                height: 132,
                 paddingLeft: 40,
                 paddingRight: 50,
                 background:
@@ -195,7 +195,7 @@ export default function Display() {
               }}
             >
               {/* 品牌区：Logo + 酒店名称 */}
-              <div className="flex items-center gap-6 min-w-0">
+              <div className="flex items-center gap-6 shrink-0">
                 {data.logo_url ? (
                   <img
                     src={data.logo_url}
@@ -212,7 +212,7 @@ export default function Display() {
                     style={{
                       fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
                       fontWeight: 700,
-                      fontSize: 42,
+                      fontSize: 48,
                       color: '#D8B56A',
                       letterSpacing: 2,
                     }}
@@ -232,26 +232,35 @@ export default function Display() {
                 </div>
               </div>
 
-              {/* 中间分隔线 + 天气 */}
-              <div className="flex items-center gap-8">
-                <div style={{ width: 1, height: 60, background: 'rgba(255,255,255,0.25)' }} />
-                <div
-                  style={{
-                    fontSize: 28,
-                    color: 'rgba(255,255,255,0.9)',
-                    letterSpacing: 1,
-                    textAlign: 'center',
-                  }}
-                >
-                  {data.weather_city && data.weather
-                    ? `${data.weather_city} · ${data.weather.text} ${data.weather.temp}℃`
-                    : data.weather_city || ''}
-                </div>
+              {/* 分隔线 */}
+              <div
+                style={{
+                  width: 1,
+                  height: 56,
+                  background: 'rgba(255,255,255,0.25)',
+                  marginLeft: 36,
+                  marginRight: 36,
+                }}
+              />
+
+              {/* 天气：在剩余空间居中 */}
+              <div
+                className="flex-1"
+                style={{
+                  fontSize: 26,
+                  color: 'rgba(255,255,255,0.9)',
+                  letterSpacing: 1,
+                  textAlign: 'center',
+                }}
+              >
+                {data.weather_city && data.weather
+                  ? `${data.weather_city} · ${data.weather.text} ${data.weather.temp}℃`
+                  : data.weather_city || ''}
               </div>
 
               {/* 时间区：日期 + 时间（无秒） */}
               <div className="flex flex-col items-end shrink-0">
-                <div style={{ fontSize: 20, color: 'rgba(255,255,255,0.75)' }}>
+                <div style={{ fontSize: 24, color: 'rgba(255,255,255,0.75)' }}>
                   {dateText} {weekdayText}
                 </div>
                 <div
@@ -259,7 +268,7 @@ export default function Display() {
                   style={{
                     fontFamily: '"DIN", "DIN Alternate", "Roboto", sans-serif',
                     fontWeight: 700,
-                    fontSize: 72,
+                    fontSize: 52,
                     color: '#FFFFFF',
                   }}
                 >
