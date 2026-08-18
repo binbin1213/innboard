@@ -20,13 +20,11 @@ const POLL_MS = 30_000
 // 外层留出安全 padding，保证核心文字(时间/日期/公告)在放大后仍在可视区
 const SAFE_PAD = 48
 
-// 天气图标动画（按天气类别，轻量 CSS 动画）
+// 天气图标动画（按天气类别，轻量 CSS 动画；雨/雪的下落动画在图标内部用 SMIL 实现）
 const WEATHER_ANIM = {
   sunny: 'w-spin 24s linear infinite',
   cloudy: 'w-float 4s ease-in-out infinite',
   overcast: 'w-float 5s ease-in-out infinite',
-  rain: 'w-float 3.5s ease-in-out infinite',
-  snow: 'w-float 4.5s ease-in-out infinite',
   storm: 'w-flicker 2.5s ease-in-out infinite',
   fog: 'w-float 6s ease-in-out infinite',
 }

@@ -104,14 +104,34 @@ export const CloudIcon = ({ size, ...props }) => (
 export const RainIcon = ({ size, ...props }) => (
   <Svg size={size} {...props}>
     <path d="M7 15h10a4 4 0 0 0 .7-7.95A5.5 5.5 0 0 0 7.1 10 3.5 3.5 0 0 0 7 15Z" />
-    <path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2" />
+    <path d="M9 18l-1 2">
+      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="1; 0; 1" dur="1s" repeatCount="indefinite" />
+    </path>
+    <path d="M13 18l-1 2">
+      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1s" begin="0.33s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="1; 0; 1" dur="1s" begin="0.33s" repeatCount="indefinite" />
+    </path>
+    <path d="M17 18l-1 2">
+      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1s" begin="0.66s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="1; 0; 1" dur="1s" begin="0.66s" repeatCount="indefinite" />
+    </path>
   </Svg>
 )
 
 export const SnowIcon = ({ size, ...props }) => (
   <Svg size={size} {...props}>
     <path d="M7 14h10a4 4 0 0 0 .7-7.95A5.5 5.5 0 0 0 7.1 9 3.5 3.5 0 0 0 7 14Z" />
-    <path d="M9 17v3M7.5 18.5h3M16 17v3M14.5 18.5h3" />
+    <g>
+      <path d="M9 17v3M7.5 18.5h3" />
+      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1.4s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="1; 0.4; 1" dur="1.4s" repeatCount="indefinite" />
+    </g>
+    <g>
+      <path d="M16 17v3M14.5 18.5h3" />
+      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1.4s" begin="0.7s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="1; 0.4; 1" dur="1.4s" begin="0.7s" repeatCount="indefinite" />
+    </g>
   </Svg>
 )
 
