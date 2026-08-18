@@ -186,7 +186,7 @@ export default function Display() {
             <header
               className="shrink-0 flex items-center justify-between"
               style={{
-                height: 124,
+                height: 140,
                 paddingLeft: 40,
                 paddingRight: 50,
                 background:
@@ -206,7 +206,7 @@ export default function Display() {
                 ) : (
                   <HotelIcon size={68} className="text-[#D8B56A] shrink-0" />
                 )}
-                <div className="flex flex-col justify-center min-w-0">
+                <div className="flex flex-col items-center justify-center min-w-0">
                   <h1
                     className="truncate leading-none"
                     style={{
@@ -222,7 +222,7 @@ export default function Display() {
                   <div
                     className="leading-none mt-3"
                     style={{
-                      fontSize: 13,
+                      fontSize: 15,
                       color: 'rgba(216,181,106,0.9)',
                       letterSpacing: 3,
                     }}
@@ -234,10 +234,10 @@ export default function Display() {
 
               {/* 中间分隔线 + 天气 */}
               <div className="flex items-center gap-8">
-                <div style={{ width: 1, height: 51, background: 'rgba(255,255,255,0.25)' }} />
+                <div style={{ width: 1, height: 60, background: 'rgba(255,255,255,0.25)' }} />
                 <div
                   style={{
-                    fontSize: 19,
+                    fontSize: 28,
                     color: 'rgba(255,255,255,0.9)',
                     letterSpacing: 1,
                     textAlign: 'center',
@@ -251,7 +251,7 @@ export default function Display() {
 
               {/* 时间区：日期 + 时间（无秒） */}
               <div className="flex flex-col items-end shrink-0">
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
+                <div style={{ fontSize: 20, color: 'rgba(255,255,255,0.75)' }}>
                   {dateText} {weekdayText}
                 </div>
                 <div
@@ -259,7 +259,7 @@ export default function Display() {
                   style={{
                     fontFamily: '"DIN", "DIN Alternate", "Roboto", sans-serif',
                     fontWeight: 700,
-                    fontSize: 54,
+                    fontSize: 72,
                     color: '#FFFFFF',
                   }}
                 >
