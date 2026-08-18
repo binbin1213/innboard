@@ -44,3 +44,25 @@ body {
 .price-flash {
   animation: price-flash 2.5s ease-out;
 }
+
+/* 天气图标动画（太阳旋转 / 云朵浮动 / 雷暴闪烁） */
+@keyframes w-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes w-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes w-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* 让旋转围绕图标中心进行 */
+.weather-glyph {
+  transform-box: fill-box;
+  transform-origin: center;
+}

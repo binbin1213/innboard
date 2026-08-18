@@ -20,6 +20,17 @@ const POLL_MS = 30_000
 // 外层留出安全 padding，保证核心文字(时间/日期/公告)在放大后仍在可视区
 const SAFE_PAD = 48
 
+// 天气图标动画（按天气类别，轻量 CSS 动画）
+const WEATHER_ANIM = {
+  sunny: 'w-spin 24s linear infinite',
+  cloudy: 'w-float 4s ease-in-out infinite',
+  overcast: 'w-float 5s ease-in-out infinite',
+  rain: 'w-float 3.5s ease-in-out infinite',
+  snow: 'w-float 4.5s ease-in-out infinite',
+  storm: 'w-flicker 2.5s ease-in-out infinite',
+  fog: 'w-float 6s ease-in-out infinite',
+}
+
 function formatPrice(price) {
   return Number.isInteger(price) ? String(price) : price.toFixed(1)
 }
@@ -224,7 +235,11 @@ export default function Display() {
                   <span className="text-[24px] text-gray-300">{data.weather_city}</span>
                   {data.weather ? (
                     <>
-                      <WeatherGlyph size={30} className="text-[#E8C872]" />
+                      <WeatherGlyph
+                        size={30}
+                        className="text-[#E8C872] weather-glyph"
+                        style={{ animation: WEATHER_ANIM[data.weather.cat] }}
+                      />
                       <span className="text-[28px] font-medium text-[#E8C872]">
                         {data.weather.text} {data.weather.temp}℃
                       </span>
