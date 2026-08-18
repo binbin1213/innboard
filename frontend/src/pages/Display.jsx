@@ -89,7 +89,6 @@ export default function Display() {
   const [offset, setOffset] = useState(0)
   const [now, setNow] = useState(new Date())
   const [carouselIndex, setCarouselIndex] = useState(0)
-  const [offline, setOffline] = useState(false)
   const [scale, setScale] = useState(1)
   const [flashed, setFlashed] = useState({})
   const loadedRef = useRef(new Set())
@@ -111,7 +110,6 @@ export default function Display() {
     try {
       const res = await api.get('/api/display')
       setData(res)
-      setOffline(false)
       setOffset(new Date(res.server_time).getTime() - Date.now())
       const prev = prevPricesRef.current
       const next = {}
@@ -126,7 +124,7 @@ export default function Display() {
         setTimeout(() => setFlashed({}), 2600)
       }
     } catch {
-      setOffline(true)
+      // 拉取失败时静默保留上一次数据继续显示，不向客人展示任何提示
     }
   }
 
@@ -275,9 +273,6 @@ export default function Display() {
                     </h2>
                     <div className="w-2 h-2 rotate-45 bg-[#D4AF37]/70 shrink-0" />
                     <div className="h-[2px] w-52 bg-gradient-to-r from-[#D4AF37]/60 to-transparent" />
-                  </div>
-                  <div className="absolute right-0 bottom-1 flex items-center gap-3 text-[20px] text-gray-500">
-                    {offline && <span className="text-red-400">网络中断，显示缓存数据</span>}
                   </div>
                 </div>
               </div>
