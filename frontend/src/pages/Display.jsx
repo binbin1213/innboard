@@ -92,7 +92,6 @@ export default function Display() {
   const [offline, setOffline] = useState(false)
   const [scale, setScale] = useState(1)
   const [flashed, setFlashed] = useState({})
-  const lastFetchRef = useRef(null)
   const loadedRef = useRef(new Set())
   const prevPricesRef = useRef({})
 
@@ -113,7 +112,6 @@ export default function Display() {
       const res = await api.get('/api/display')
       setData(res)
       setOffline(false)
-      lastFetchRef.current = new Date()
       setOffset(new Date(res.server_time).getTime() - Date.now())
       const prev = prevPricesRef.current
       const next = {}
@@ -177,9 +175,6 @@ export default function Display() {
   const timeParts = now.toLocaleTimeString('zh-CN', { hour12: false }).split(':')
   const hhmm = `${timeParts[0]}:${timeParts[1]}`
   const ss = timeParts[2] || '00'
-  const lastFetchText = lastFetchRef.current
-    ? lastFetchRef.current.toLocaleTimeString('zh-CN', { hour12: false })
-    : '--:--:--'
   const WeatherGlyph = data.weather ? WEATHER_ICONS[data.weather.cat] || CloudIcon : null
 
   return (
@@ -283,7 +278,6 @@ export default function Display() {
                   </div>
                   <div className="absolute right-0 bottom-1 flex items-center gap-3 text-[20px] text-gray-500">
                     {offline && <span className="text-red-400">网络中断，显示缓存数据</span>}
-                    <span>更新时间 {lastFetchText}</span>
                   </div>
                 </div>
               </div>
