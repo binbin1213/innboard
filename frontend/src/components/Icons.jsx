@@ -81,72 +81,94 @@ export const StarIcon = ({ size }) => (
   </Svg>
 )
 
+// 彩色云朵形状（多个天气图标复用）
+const CloudShape = ({ color = '#90A4AE' }) => (
+  <g fill={color}>
+    <circle cx="23" cy="41" r="11" />
+    <circle cx="36" cy="35" r="13" />
+    <circle cx="48" cy="42" r="9" />
+    <rect x="23" y="38" width="25" height="13" rx="6.5" />
+  </g>
+)
+
 export const SunIcon = ({ size, ...props }) => (
-  <Svg size={size} {...props}>
-    <circle cx="12" cy="12" r="4" />
-    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-  </Svg>
+  <svg width={size} height={size} viewBox="0 0 64 64" {...props}>
+    <g stroke="#FFB300" strokeWidth="4" strokeLinecap="round">
+      <path d="M32 8v8M32 48v8M8 32h8M48 32h8M15 15l6 6M43 43l6 6M49 15l-6 6M21 43l-6 6" />
+    </g>
+    <circle cx="32" cy="32" r="13" fill="#FFC107" />
+  </svg>
 )
 
 export const CloudSunIcon = ({ size, ...props }) => (
-  <Svg size={size} {...props}>
-    <path d="M16.5 7.5a3.5 3.5 0 1 0-1.2 6.8" />
-    <path d="M7 18h9.5a3.5 3.5 0 1 0-.6-6.96A4.5 4.5 0 0 0 7.4 13 3 3 0 0 0 7 18Z" />
-  </Svg>
+  <svg width={size} height={size} viewBox="0 0 64 64" {...props}>
+    <circle cx="25" cy="25" r="9" fill="#FFC107" />
+    <g stroke="#FFB300" strokeWidth="3" strokeLinecap="round">
+      <path d="M25 11v5M25 34v5M11 25h5M34 25h5" />
+    </g>
+    <CloudShape color="#B0BEC5" />
+  </svg>
 )
 
 export const CloudIcon = ({ size, ...props }) => (
-  <Svg size={size} {...props}>
-    <path d="M7 18h10a4 4 0 0 0 .7-7.95A5.5 5.5 0 0 0 7.1 13 3.5 3.5 0 0 0 7 18Z" />
-  </Svg>
+  <svg width={size} height={size} viewBox="0 0 64 64" {...props}>
+    <CloudShape color="#90A4AE" />
+  </svg>
 )
 
 export const RainIcon = ({ size, ...props }) => (
-  <Svg size={size} {...props}>
-    <path d="M7 15h10a4 4 0 0 0 .7-7.95A5.5 5.5 0 0 0 7.1 10 3.5 3.5 0 0 0 7 15Z" />
-    <path d="M9 18l-1 2">
-      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1s" repeatCount="indefinite" />
-      <animate attributeName="opacity" values="1; 0; 1" dur="1s" repeatCount="indefinite" />
-    </path>
-    <path d="M13 18l-1 2">
-      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1s" begin="0.33s" repeatCount="indefinite" />
-      <animate attributeName="opacity" values="1; 0; 1" dur="1s" begin="0.33s" repeatCount="indefinite" />
-    </path>
-    <path d="M17 18l-1 2">
-      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1s" begin="0.66s" repeatCount="indefinite" />
-      <animate attributeName="opacity" values="1; 0; 1" dur="1s" begin="0.66s" repeatCount="indefinite" />
-    </path>
-  </Svg>
+  <svg width={size} height={size} viewBox="0 0 64 64" {...props}>
+    <CloudShape color="#78909C" />
+    <g fill="#29B6F6">
+      <rect x="27" y="46" width="4" height="8" rx="2">
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 6; 0 0" dur="1s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="1; 0; 1" dur="1s" repeatCount="indefinite" />
+      </rect>
+      <rect x="37" y="46" width="4" height="8" rx="2">
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 6; 0 0" dur="1s" begin="0.33s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="1; 0; 1" dur="1s" begin="0.33s" repeatCount="indefinite" />
+      </rect>
+      <rect x="47" y="46" width="4" height="8" rx="2">
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 6; 0 0" dur="1s" begin="0.66s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="1; 0; 1" dur="1s" begin="0.66s" repeatCount="indefinite" />
+      </rect>
+    </g>
+  </svg>
 )
 
 export const SnowIcon = ({ size, ...props }) => (
-  <Svg size={size} {...props}>
-    <path d="M7 14h10a4 4 0 0 0 .7-7.95A5.5 5.5 0 0 0 7.1 9 3.5 3.5 0 0 0 7 14Z" />
-    <g>
-      <path d="M9 17v3M7.5 18.5h3" />
-      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1.4s" repeatCount="indefinite" />
-      <animate attributeName="opacity" values="1; 0.4; 1" dur="1.4s" repeatCount="indefinite" />
+  <svg width={size} height={size} viewBox="0 0 64 64" {...props}>
+    <CloudShape color="#90A4AE" />
+    <g stroke="#E1F5FE" strokeWidth="3" strokeLinecap="round">
+      <g>
+        <path d="M28 46v8M24 50h8" />
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 6; 0 0" dur="1.4s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="1; 0.4; 1" dur="1.4s" repeatCount="indefinite" />
+      </g>
+      <g>
+        <path d="M40 46v8M36 50h8" />
+        <animateTransform attributeName="transform" type="translate" values="0 0; 0 6; 0 0" dur="1.4s" begin="0.7s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="1; 0.4; 1" dur="1.4s" begin="0.7s" repeatCount="indefinite" />
+      </g>
     </g>
-    <g>
-      <path d="M16 17v3M14.5 18.5h3" />
-      <animateTransform attributeName="transform" type="translate" values="0 0; 0 4; 0 0" dur="1.4s" begin="0.7s" repeatCount="indefinite" />
-      <animate attributeName="opacity" values="1; 0.4; 1" dur="1.4s" begin="0.7s" repeatCount="indefinite" />
-    </g>
-  </Svg>
+  </svg>
 )
 
 export const StormIcon = ({ size, ...props }) => (
-  <Svg size={size} {...props}>
-    <path d="M7 13h9.5a3.5 3.5 0 0 0 .6-6.96A5 5 0 0 0 7.4 8.5 3.5 3.5 0 0 0 7 13Z" />
-    <path d="M12 13l-2.5 4h4L11 21" />
-  </Svg>
+  <svg width={size} height={size} viewBox="0 0 64 64" {...props}>
+    <CloudShape color="#546E7A" />
+    <path d="M33 30 L23 44 h8 L28 54 L43 39 h-8 Z" fill="#FFC107" />
+  </svg>
 )
 
 export const FogIcon = ({ size, ...props }) => (
-  <Svg size={size} {...props}>
-    <path d="M7 12h11a3.5 3.5 0 0 0 .6-6.96A5 5 0 0 0 7.2 7.5 3.5 3.5 0 0 0 7 12Z" />
-    <path d="M5 16h14M7 19h10" />
-  </Svg>
+  <svg width={size} height={size} viewBox="0 0 64 64" {...props}>
+    <CloudShape color="#90A4AE" />
+    <g stroke="#B0BEC5" strokeWidth="3" strokeLinecap="round">
+      <path d="M18 52h28" />
+      <path d="M24 57h18" />
+    </g>
+  </svg>
 )
 
 export const WEATHER_ICONS = {
