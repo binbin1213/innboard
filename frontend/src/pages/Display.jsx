@@ -215,30 +215,30 @@ export default function Display() {
                 ) : (
                   <HotelIcon size={56} className="text-[#D4AF37] shrink-0" />
                 )}
-                <h1 className="text-[46px] font-bold tracking-wider text-[#D4AF37] truncate">
+                <h1 className="text-[58px] font-bold tracking-wider text-[#D4AF37] truncate">
                   {data.hotel_name}
                 </h1>
               </div>
               {data.weather_city && (
                 <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
-                  <span className="text-[28px] text-gray-200">{data.weather_city}</span>
+                  <span className="text-[24px] text-gray-300">{data.weather_city}</span>
                   {data.weather ? (
                     <>
-                      <WeatherGlyph size={40} className="text-[#E8C872]" />
-                      <span className="text-[34px] font-medium text-[#E8C872]">
+                      <WeatherGlyph size={30} className="text-[#E8C872]" />
+                      <span className="text-[28px] font-medium text-[#E8C872]">
                         {data.weather.text} {data.weather.temp}℃
                       </span>
                     </>
                   ) : (
-                    <span className="text-[24px] text-gray-500">天气未配置</span>
+                    <span className="text-[20px] text-gray-500">天气未配置</span>
                   )}
                 </div>
               )}
               <div className="flex flex-col items-end shrink-0">
-                <div className="text-[26px] text-gray-300">
+                <div className="text-[22px] text-gray-300">
                   {dateText} {weekdayText}
                 </div>
-                <div className="text-[72px] font-bold leading-tight tabular-nums">
+                <div className="text-[48px] font-bold leading-tight tabular-nums">
                   {hhmm}
                   <span key={ss} className="animate-sec-fade text-[#E8C872]">
                     :{ss}
