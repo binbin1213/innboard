@@ -165,6 +165,14 @@ function registerIpc() {
   ipcMain.handle('get-displays', () => displayInfo());
   ipcMain.handle('play', () => openDisplay());
   ipcMain.handle('stop', () => ({ ok: closeDisplay() }));
+  ipcMain.handle('refresh', () => {
+    const base = normalizeBaseUrl(loadConfig().serverUrl);
+    if (displayWin && !displayWin.isDestroyed() && base) {
+      displayWin.loadURL(base + '/display');
+      return { ok: true };
+    }
+    return { ok: false, msg: '当前没有在播放' };
+  });
   ipcMain.handle('open-admin', () => {
     const base = normalizeBaseUrl(loadConfig().serverUrl);
     if (!base) return { ok: false, msg: '请先填写服务器地址' };

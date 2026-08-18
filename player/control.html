@@ -122,6 +122,7 @@
       <button class="big play" id="play">▶ 播放</button>
       <button class="big stop" id="stop">■ 停止</button>
     </div>
+    <button class="secondary btn-plain" id="refresh" style="margin-top:12px">🔄 刷新电视画面</button>
   </div>
 
   <div class="card">
@@ -140,6 +141,7 @@
     const $save = document.getElementById('save');
     const $play = document.getElementById('play');
     const $stop = document.getElementById('stop');
+    const $refresh = document.getElementById('refresh');
     const $admin = document.getElementById('admin');
     const $status = document.getElementById('status');
 
@@ -188,6 +190,11 @@
     $stop.addEventListener('click', async () => {
       await ipcRenderer.invoke('stop');
       setStatus('⏸ 已停止播放');
+    });
+
+    $refresh.addEventListener('click', async () => {
+      const r = await ipcRenderer.invoke('refresh');
+      setStatus(r.ok ? '🔄 已刷新电视画面' : `❌ ${(r && r.msg) || '刷新失败'}`);
     });
 
     $admin.addEventListener('click', async () => {
