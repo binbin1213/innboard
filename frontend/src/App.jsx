@@ -6,6 +6,7 @@ import ImagesPage from './pages/admin/ImagesPage'
 import Login from './pages/admin/Login'
 import RoomsPage from './pages/admin/RoomsPage'
 import SettingsPage from './pages/admin/SettingsPage'
+import WelcomePage from './pages/admin/WelcomePage'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="rooms" element={<RoomsPage />} />
         <Route path="images" element={<ImagesPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
+        <Route path="welcome" element={<WelcomePage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/display" replace />} />

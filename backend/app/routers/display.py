@@ -11,6 +11,28 @@ from ..weather import get_weather
 router = APIRouter(prefix="/api", tags=["display"])
 
 
+def get_welcome(db: Session) -> dict:
+    """欢迎致辞配置：enabled 含到期自动失效判断（到期自动恢复图片轮播）。"""
+    enabled = get_setting(db, "welcome_enabled") == "1"
+    end_time = get_setting(db, "welcome_end_time")
+    if enabled and end_time:
+        try:
+            end_dt = datetime.fromisoformat(end_time)
+            if datetime.now().astimezone() > end_dt.astimezone():
+                enabled = False
+        except ValueError:
+            pass
+    image = get_setting(db, "welcome_image_filename")
+    return {
+        "enabled": enabled,
+        "title": get_setting(db, "welcome_title"),
+        "subtitle": get_setting(db, "welcome_subtitle"),
+        "message": get_setting(db, "welcome_message"),
+        "image_url": f"/uploads/{image}" if image else "",
+        "end_time": end_time,
+    }
+
+
 @router.get("/display")
 def get_display(db: Session = Depends(get_db)):
     rooms = db.query(Room).order_by(Room.sort_order, Room.id).all()
@@ -31,6 +53,7 @@ def get_display(db: Session = Depends(get_db)):
         "qr_url": f"/uploads/{qr}" if qr else "",
         "carousel_interval": int(get_setting(db, "carousel_interval", "5")),
         "images": [f"/uploads/{img.filename}" for img in images],
+        "welcome": get_welcome(db),
         "rooms": [
             {
                 "name": r.name,

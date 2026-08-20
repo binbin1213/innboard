@@ -336,3 +336,66 @@ async def upload_qr(file: UploadFile = File(...), db: Session = Depends(get_db),
     set_setting(db, "qr_filename", filename)
     db.commit()
     return {"qr_url": f"/uploads/{filename}"}
+
+
+# ---------- 欢迎致辞 ----------
+
+class WelcomeBody(BaseModel):
+    enabled: bool = True
+    title: str = ""
+    subtitle: str = ""
+    message: str = ""
+    end_time: str = ""
+
+
+def welcome_dict(db: Session) -> dict:
+    logo = get_setting(db, "welcome_image_filename")
+    return {
+        "enabled": get_setting(db, "welcome_enabled") == "1",
+        "title": get_setting(db, "welcome_title"),
+        "subtitle": get_setting(db, "welcome_subtitle"),
+        "message": get_setting(db, "welcome_message"),
+        "image_url": f"/uploads/{logo}" if logo else "",
+        "end_time": get_setting(db, "welcome_end_time"),
+    }
+
+
+@router.get("/welcome")
+def get_welcome_config(db: Session = Depends(get_db), _: str = Depends(require_auth)):
+    return welcome_dict(db)
+
+
+@router.put("/welcome")
+def update_welcome(body: WelcomeBody, db: Session = Depends(get_db), _: str = Depends(require_auth)):
+    set_setting(db, "welcome_enabled", "1" if body.enabled else "0")
+    set_setting(db, "welcome_title", body.title.strip())
+    set_setting(db, "welcome_subtitle", body.subtitle.strip())
+    set_setting(db, "welcome_message", body.message.strip())
+    set_setting(db, "welcome_end_time", body.end_time.strip())
+    db.commit()
+    return welcome_dict(db)
+
+
+@router.post("/welcome/image")
+async def upload_welcome_image(file: UploadFile = File(...), db: Session = Depends(get_db), _: str = Depends(require_auth)):
+    filename = await save_upload(file)
+    old = get_setting(db, "welcome_image_filename")
+    if old:
+        old_path = UPLOAD_DIR / old
+        if old_path.exists():
+            old_path.unlink()
+    set_setting(db, "welcome_image_filename", filename)
+    db.commit()
+    return {"image_url": f"/uploads/{filename}"}
+
+
+@router.delete("/welcome/image")
+def delete_welcome_image(db: Session = Depends(get_db), _: str = Depends(require_auth)):
+    old = get_setting(db, "welcome_image_filename")
+    if old:
+        old_path = UPLOAD_DIR / old
+        if old_path.exists():
+            old_path.unlink()
+    set_setting(db, "welcome_image_filename", "")
+    db.commit()
+    return {"ok": True}

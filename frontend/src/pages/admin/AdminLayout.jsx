@@ -6,6 +6,7 @@ const tabs = [
   { to: '/admin/rooms', label: '房价管理' },
   { to: '/admin/images', label: '图片管理' },
   { to: '/admin/announcements', label: '公告管理' },
+  { to: '/admin/welcome', label: '欢迎致辞' },
   { to: '/admin/settings', label: '系统设置' },
 ]
 

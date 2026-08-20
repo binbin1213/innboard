@@ -82,6 +82,90 @@ function RoomCard({ room, flashed }) {
   )
 }
 
+// 欢迎致辞横幅：优先显示，覆盖图片轮播区
+// 支持：文字（主标题/副标题/落款）自由填写 + 可选背景图（文字叠加在图上）
+function WelcomeBanner({ welcome, hotelName }) {
+  const { title, subtitle, message, image_url } = welcome
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {/* 背景：有图用图，无图用金色渐变 */}
+      {image_url ? (
+        <img src={image_url} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0b1220] via-[#0d1a30] to-[#1a2b4a]" />
+      )}
+      {/* 半透明遮罩：保证文字在图片上清晰可读 */}
+      <div className="absolute inset-0 bg-black/40" />
+
+      {/* 顶部小标：WELCOME */}
+      <div className="absolute top-8 inset-x-0 flex flex-col items-center">
+        <div className="flex items-center gap-4">
+          <div className="h-px w-16 bg-[#D4AF37]/70" />
+          <span className="text-[24px] text-[#D4AF37] tracking-[0.6em] pl-[0.6em] font-medium">
+            WELCOME
+          </span>
+          <div className="h-px w-16 bg-[#D4AF37]/70" />
+        </div>
+      </div>
+
+      {/* 中间文字区 */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-12">
+        {title && (
+          <div
+            className="leading-tight text-white font-bold"
+            style={{
+              fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
+              fontSize: 84,
+              letterSpacing: 6,
+              textShadow: '0 4px 24px rgba(0,0,0,0.6)',
+            }}
+          >
+            {title}
+          </div>
+        )}
+        {subtitle && (
+          <div
+            className="mt-6 font-bold"
+            style={{
+              fontSize: 48,
+              letterSpacing: 4,
+              color: '#E8C872',
+              textShadow: '0 3px 16px rgba(0,0,0,0.6)',
+            }}
+          >
+            {subtitle}
+          </div>
+        )}
+        {message && (
+          <div
+            className="mt-5 max-w-[860px]"
+            style={{
+              fontSize: 30,
+              letterSpacing: 2,
+              color: 'rgba(255,255,255,0.92)',
+              textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+            }}
+          >
+            {message}
+          </div>
+        )}
+      </div>
+
+      {/* 底部落款：酒店名 */}
+      {hotelName && (
+        <div className="absolute bottom-6 inset-x-0 flex justify-center">
+          <div
+            className="text-[26px]"
+            style={{ color: 'rgba(232,200,114,0.85)', letterSpacing: 4 }}
+          >
+            {hotelName} 敬上
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Display() {
   const [data, setData] = useState(null)
   const [offset, setOffset] = useState(0)
@@ -139,6 +223,7 @@ export default function Display() {
 
   const images = data?.images || []
   const interval = Math.max(3, data?.carousel_interval || 5)
+  const welcome = data?.welcome || {}
 
   useEffect(() => {
     if (images.length === 0) return
@@ -150,13 +235,14 @@ export default function Display() {
     })
   }, [images])
 
+  // 轮播仅在无欢迎致辞时运行
   useEffect(() => {
-    if (images.length === 0) return
+    if (images.length === 0 || welcome.enabled) return
     const timer = setInterval(() => {
       setCarouselIndex((i) => (i + 1) % images.length)
     }, interval * 1000)
     return () => clearInterval(timer)
-  }, [images, interval])
+  }, [images, interval, welcome.enabled])
 
   if (!data) {
     return <div className="h-full w-full bg-black" />
@@ -277,9 +363,11 @@ export default function Display() {
               </div>
             </header>
 
-            {/* 横版图片轮播（16:9 条幅） */}
+            {/* 横版图片轮播（16:9 条幅）—— 欢迎致辞优先 */}
             <div className="relative mx-10 mt-5 h-[565px] shrink-0 rounded-2xl overflow-hidden bg-[#111a2e]">
-              {images.length === 0 ? (
+              {welcome.enabled ? (
+                <WelcomeBanner welcome={welcome} hotelName={data.hotel_name} />
+              ) : images.length === 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
                     <div className="text-[48px] text-[#D4AF37] font-bold">{data.hotel_name}</div>
