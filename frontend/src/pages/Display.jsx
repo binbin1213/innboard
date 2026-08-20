@@ -156,14 +156,14 @@ function WelcomeBanner({ welcome, hotelName }) {
           )}
         </div>
 
-        {/* 底部落款：酒店名 */}
+        {/* 底部落款：酒店名，右下角 */}
         {hotelName && (
-          <div className="shrink-0">
+          <div className="shrink-0 w-full flex justify-end pr-3">
             <div
               className="text-[40px]"
               style={{ color: 'rgba(232,200,114,0.85)', letterSpacing: 4 }}
             >
-              {hotelName} 敬上
+              {hotelName}
             </div>
           </div>
         )}
