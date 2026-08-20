@@ -211,10 +211,10 @@ export default function WelcomePage() {
                 WELCOME
               </div>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-                <div className="text-[#DE2910] font-black text-4xl" style={{ letterSpacing: 4 }}>
+                <div className="text-[#E8C872] font-black text-4xl" style={{ letterSpacing: 4 }}>
                   {form.title || '热烈欢迎'}
                 </div>
-                {form.subtitle && <div className="mt-2 text-[#E8C872] text-xl font-bold">{form.subtitle}</div>}
+                {form.subtitle && <div className="mt-2 text-[#DE2910] text-2xl font-black">{form.subtitle}</div>}
                 {form.message && <div className="mt-2 text-white/90 text-sm">{form.message}</div>}
               </div>
               <div className="absolute bottom-2 right-3 text-[#E8C872]/85 text-xs tracking-[0.3em]">

@@ -89,7 +89,7 @@ function WelcomeBanner({ welcome, hotelName }) {
   const { title, subtitle, message, image_url } = welcome
   // 按字数自适应字号：越短越大，长文本自动降级避免换行溢出
   const titleFont = title.length > 10 ? 92 : title.length > 6 ? 108 : 126
-  const subtitleFont = subtitle.length > 12 ? 64 : subtitle.length > 8 ? 76 : 88
+  const subtitleFont = subtitle.length > 12 ? 68 : subtitle.length > 8 ? 80 : 96
   const messageFont = message.length > 24 ? 36 : message.length > 14 ? 42 : 50
   return (
     <div className="absolute inset-0 overflow-hidden">
@@ -123,7 +123,7 @@ function WelcomeBanner({ welcome, hotelName }) {
                 fontSize: titleFont,
                 fontWeight: 900,
                 letterSpacing: 8,
-                color: '#DE2910',
+                color: '#E8C872',
                 textShadow: '0 4px 24px rgba(0,0,0,0.55)',
               }}
             >
@@ -132,12 +132,13 @@ function WelcomeBanner({ welcome, hotelName }) {
           )}
           {subtitle && (
             <div
-              className="mt-3 font-bold w-full"
+              className="mt-4 w-full"
               style={{
                 fontSize: subtitleFont,
-                letterSpacing: 5,
-                color: '#E8C872',
-                textShadow: '0 3px 16px rgba(0,0,0,0.6)',
+                fontWeight: 900,
+                letterSpacing: 6,
+                color: '#DE2910',
+                textShadow: '0 3px 18px rgba(0,0,0,0.6)',
               }}
             >
               {subtitle}
