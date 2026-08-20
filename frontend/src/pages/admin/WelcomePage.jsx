@@ -211,7 +211,7 @@ export default function WelcomePage() {
                 WELCOME
               </div>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-                <div className="text-white font-bold text-4xl" style={{ letterSpacing: 4 }}>
+                <div className="text-[#C8102E] font-bold text-4xl" style={{ letterSpacing: 4 }}>
                   {form.title || '热烈欢迎'}
                 </div>
                 {form.subtitle && <div className="mt-2 text-[#E8C872] text-xl font-bold">{form.subtitle}</div>}
