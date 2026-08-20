@@ -56,7 +56,6 @@ function RoomCard({ room, flashed }) {
       </div>
       {room.sold_out ? (
         <div className="flex items-center gap-4 shrink-0">
-          <span className="text-[38px] font-bold text-red-400 mr-2">满房</span>
           <div className="flex items-center gap-4 opacity-50">
             <span className="text-[24px] text-gray-500 line-through tabular-nums">
               ¥{formatPrice(room.rack_price)}
@@ -68,6 +67,7 @@ function RoomCard({ room, flashed }) {
               ¥{formatPrice(room.member_price)}
             </span>
           </div>
+          <span className="text-[38px] font-bold text-red-400 ml-2">满房</span>
         </div>
       ) : (
         <div className="flex items-center gap-4 shrink-0">
