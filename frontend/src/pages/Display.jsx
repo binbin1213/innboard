@@ -47,7 +47,7 @@ function RoomCard({ room, flashed }) {
           {room.description && (
             <div className="text-[21px] text-gray-400 mt-1">
               {room.description}
-              {room.remaining_rooms != null && room.remaining_rooms > 0 && (
+              {!room.sold_out && room.remaining_rooms != null && room.remaining_rooms > 0 && (
                 <span className="text-red-400 ml-4">仅剩 {room.remaining_rooms} 间</span>
               )}
             </div>
@@ -55,7 +55,20 @@ function RoomCard({ room, flashed }) {
         </div>
       </div>
       {room.sold_out ? (
-        <span className="text-[38px] font-bold text-red-400">满房</span>
+        <div className="flex items-center gap-4 shrink-0">
+          <span className="text-[38px] font-bold text-red-400 mr-2">满房</span>
+          <div className="flex items-center gap-4 opacity-50">
+            <span className="text-[24px] text-gray-500 line-through tabular-nums">
+              ¥{formatPrice(room.rack_price)}
+            </span>
+            <span className="text-[21px] px-3.5 py-1 rounded-full bg-gray-600 text-gray-300 font-semibold">
+              会员专享
+            </span>
+            <span className="text-[56px] font-bold text-gray-400 line-through tabular-nums leading-none">
+              ¥{formatPrice(room.member_price)}
+            </span>
+          </div>
+        </div>
       ) : (
         <div className="flex items-center gap-4 shrink-0">
           <span className="text-[24px] text-gray-500 line-through tabular-nums">
