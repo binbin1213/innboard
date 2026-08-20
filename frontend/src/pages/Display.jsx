@@ -67,7 +67,7 @@ function RoomCard({ room, flashed }) {
               ¥{formatPrice(room.member_price)}
             </span>
           </div>
-          <span className="text-[38px] font-bold text-red-400 ml-2">满房</span>
+          <span className="text-[38px] font-bold text-red-400 w-[110px] text-center">满房</span>
         </div>
       ) : (
         <div className="flex items-center gap-4 shrink-0">
@@ -85,7 +85,7 @@ function RoomCard({ room, flashed }) {
             ¥{formatPrice(room.member_price)}
           </span>
           {saving > 0 && (
-            <span className="text-[20px] px-3 py-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold">
+            <span className="text-[20px] px-3 py-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold w-[110px] text-center">
               省 ¥{formatPrice(saving)}
             </span>
           )}
