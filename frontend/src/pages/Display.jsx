@@ -117,12 +117,13 @@ function WelcomeBanner({ welcome, hotelName }) {
         <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center text-center">
           {title && (
             <div
-              className="leading-tight font-bold w-full"
+              className="leading-tight w-full"
               style={{
                 fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
                 fontSize: titleFont,
+                fontWeight: 900,
                 letterSpacing: 8,
-                color: '#C8102E',
+                color: '#DE2910',
                 textShadow: '0 4px 24px rgba(0,0,0,0.55)',
               }}
             >
