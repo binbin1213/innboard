@@ -127,7 +127,7 @@ function WelcomeBanner({ welcome, hotelName }) {
           <div
             className="mt-6 font-bold"
             style={{
-              fontSize: 48,
+              fontSize: 60,
               letterSpacing: 4,
               color: '#E8C872',
               textShadow: '0 3px 16px rgba(0,0,0,0.6)',
