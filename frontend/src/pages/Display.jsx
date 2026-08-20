@@ -84,8 +84,13 @@ function RoomCard({ room, flashed }) {
 
 // 欢迎致辞横幅：优先显示，覆盖图片轮播区
 // 支持：文字（主标题/副标题/落款）自由填写 + 可选背景图（文字叠加在图上）
+// 布局：文字撑满整个横幅，四周只留少量边距；长文本自动降字号防溢出
 function WelcomeBanner({ welcome, hotelName }) {
   const { title, subtitle, message, image_url } = welcome
+  // 按字数自适应字号：越短越大，长文本自动降级避免换行溢出
+  const titleFont = title.length > 10 ? 92 : title.length > 6 ? 108 : 126
+  const subtitleFont = subtitle.length > 12 ? 64 : subtitle.length > 8 ? 76 : 88
+  const messageFont = message.length > 24 ? 36 : message.length > 14 ? 42 : 50
   return (
     <div className="absolute inset-0 overflow-hidden">
       {/* 背景：有图用图，无图用金色渐变 */}
@@ -97,71 +102,72 @@ function WelcomeBanner({ welcome, hotelName }) {
       {/* 半透明遮罩：保证文字在图片上清晰可读 */}
       <div className="absolute inset-0 bg-black/40" />
 
-      {/* 顶部小标：WELCOME */}
-      <div className="absolute top-8 inset-x-0 flex flex-col items-center">
-        <div className="flex items-center gap-4">
-          <div className="h-px w-16 bg-[#D4AF37]/70" />
-          <span className="text-[24px] text-[#D4AF37] tracking-[0.6em] pl-[0.6em] font-medium">
+      {/* 内容区：撑满全高，四周只留少量边距 */}
+      <div className="absolute inset-0 flex flex-col items-center px-10 pt-5 pb-4">
+        {/* 顶部小标：WELCOME */}
+        <div className="shrink-0 flex items-center gap-5">
+          <div className="h-[2px] w-20 bg-[#D4AF37]/70" />
+          <span className="text-[32px] text-[#D4AF37] tracking-[0.6em] pl-[0.6em] font-medium">
             WELCOME
           </span>
-          <div className="h-px w-16 bg-[#D4AF37]/70" />
+          <div className="h-[2px] w-20 bg-[#D4AF37]/70" />
         </div>
-      </div>
 
-      {/* 中间文字区 */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-12">
-        {title && (
-          <div
-            className="leading-tight text-white font-bold"
-            style={{
-              fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
-              fontSize: 84,
-              letterSpacing: 6,
-              textShadow: '0 4px 24px rgba(0,0,0,0.6)',
-            }}
-          >
-            {title}
-          </div>
-        )}
-        {subtitle && (
-          <div
-            className="mt-6 font-bold"
-            style={{
-              fontSize: 60,
-              letterSpacing: 4,
-              color: '#E8C872',
-              textShadow: '0 3px 16px rgba(0,0,0,0.6)',
-            }}
-          >
-            {subtitle}
-          </div>
-        )}
-        {message && (
-          <div
-            className="mt-5 max-w-[860px]"
-            style={{
-              fontSize: 30,
-              letterSpacing: 2,
-              color: 'rgba(255,255,255,0.92)',
-              textShadow: '0 2px 12px rgba(0,0,0,0.6)',
-            }}
-          >
-            {message}
-          </div>
-        )}
-      </div>
-
-      {/* 底部落款：酒店名 */}
-      {hotelName && (
-        <div className="absolute bottom-6 inset-x-0 flex justify-center">
-          <div
-            className="text-[26px]"
-            style={{ color: 'rgba(232,200,114,0.85)', letterSpacing: 4 }}
-          >
-            {hotelName} 敬上
-          </div>
+        {/* 中间文字区：垂直占满剩余高度 */}
+        <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center text-center">
+          {title && (
+            <div
+              className="leading-tight text-white font-bold w-full"
+              style={{
+                fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
+                fontSize: titleFont,
+                letterSpacing: 8,
+                textShadow: '0 4px 24px rgba(0,0,0,0.6)',
+              }}
+            >
+              {title}
+            </div>
+          )}
+          {subtitle && (
+            <div
+              className="mt-3 font-bold w-full"
+              style={{
+                fontSize: subtitleFont,
+                letterSpacing: 5,
+                color: '#E8C872',
+                textShadow: '0 3px 16px rgba(0,0,0,0.6)',
+              }}
+            >
+              {subtitle}
+            </div>
+          )}
+          {message && (
+            <div
+              className="mt-3 w-full"
+              style={{
+                fontSize: messageFont,
+                letterSpacing: 3,
+                color: 'rgba(255,255,255,0.92)',
+                textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+              }}
+            >
+              {message}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* 底部落款：酒店名 */}
+        {hotelName && (
+          <div className="shrink-0">
+            <div
+              className="text-[40px]"
+              style={{ color: 'rgba(232,200,114,0.85)', letterSpacing: 4 }}
+            >
+              {hotelName} 敬上
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
