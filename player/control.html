@@ -123,7 +123,13 @@
       <button class="big stop" id="stop">■ 停止</button>
     </div>
     <button class="secondary btn-plain" id="refresh" style="margin-top:12px">🔄 刷新电视画面</button>
-    <button class="secondary btn-plain" id="local" style="margin-top:10px">🏠 本地模式（应急时钟，断网时用）</button>
+  </div>
+
+  <div class="card">
+    <label class="label">本地备份（应急用）</label>
+    <button class="secondary btn-plain" id="cache" style="margin-bottom:10px">📥 手动缓存完整页面</button>
+    <button class="secondary btn-plain" id="local">🏠 本地模式（显示缓存页面）</button>
+    <div class="hint">连网时点「手动缓存」存一份完整页面；断网时点「本地模式」在电视上显示它。</div>
   </div>
 
   <div class="card">
@@ -144,6 +150,7 @@
     const $stop = document.getElementById('stop');
     const $refresh = document.getElementById('refresh');
     const $local = document.getElementById('local');
+    const $cache = document.getElementById('cache');
     const $admin = document.getElementById('admin');
     const $status = document.getElementById('status');
 
@@ -201,7 +208,13 @@
 
     $local.addEventListener('click', async () => {
       const r = await ipcRenderer.invoke('local-mode');
-      setStatus(r.ok ? '🏠 已切换到本地应急模式（电视显示本地时钟）' : `❌ ${(r && r.msg) || '切换失败'}`);
+      setStatus(r.ok ? '🏠 已切换到本地模式（电视显示缓存的房价牌页面）' : `❌ ${(r && r.msg) || '切换失败'}`);
+    });
+
+    $cache.addEventListener('click', async () => {
+      setStatus('⏳ 正在下载缓存（页面 + 数据 + 图片）…');
+      const r = await ipcRenderer.invoke('cache-snapshot');
+      setStatus(r.ok ? '✅ 缓存成功！已保存完整页面，断网时点「本地模式」即可显示' : `❌ ${(r && r.msg) || '缓存失败'}`);
     });
 
     $admin.addEventListener('click', async () => {
