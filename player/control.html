@@ -99,7 +99,15 @@
     }
     .btn-danger:hover { background: rgba(255, 120, 120, 0.1); }
     .btn-block { width: 100%; padding: 10px 0; }
-    .btn-half { flex: 1; padding: 11px 0; }
+    .btn-half {
+      flex: 1;
+      padding: 11px 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-half svg { flex-shrink: 0; }
     .pair { display: flex; gap: 10px; }
     .hint {
       color: var(--muted);
@@ -135,8 +143,18 @@
   <div class="card">
     <label class="label">电视播放</label>
     <div class="pair">
-      <button class="btn-primary btn-half" id="play">播放</button>
-      <button class="btn-danger btn-half" id="stop">停止</button>
+      <button class="btn-primary btn-half" id="play">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.99-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14z" />
+        </svg>
+        播放
+      </button>
+      <button class="btn-danger btn-half" id="stop">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <rect x="6" y="6" width="12" height="12" rx="1.5" />
+        </svg>
+        停止
+      </button>
     </div>
     <button class="btn-ghost btn-block" id="refresh" style="margin-top:10px;">刷新画面</button>
   </div>
