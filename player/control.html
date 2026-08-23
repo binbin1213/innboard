@@ -123,6 +123,7 @@
       <button class="big stop" id="stop">■ 停止</button>
     </div>
     <button class="secondary btn-plain" id="refresh" style="margin-top:12px">🔄 刷新电视画面</button>
+    <button class="secondary btn-plain" id="local" style="margin-top:10px">🏠 本地模式（应急时钟，断网时用）</button>
   </div>
 
   <div class="card">
@@ -142,6 +143,7 @@
     const $play = document.getElementById('play');
     const $stop = document.getElementById('stop');
     const $refresh = document.getElementById('refresh');
+    const $local = document.getElementById('local');
     const $admin = document.getElementById('admin');
     const $status = document.getElementById('status');
 
@@ -195,6 +197,11 @@
     $refresh.addEventListener('click', async () => {
       const r = await ipcRenderer.invoke('refresh');
       setStatus(r.ok ? '🔄 已刷新电视画面' : `❌ ${(r && r.msg) || '刷新失败'}`);
+    });
+
+    $local.addEventListener('click', async () => {
+      const r = await ipcRenderer.invoke('local-mode');
+      setStatus(r.ok ? '🏠 已切换到本地应急模式（电视显示本地时钟）' : `❌ ${(r && r.msg) || '切换失败'}`);
     });
 
     $admin.addEventListener('click', async () => {

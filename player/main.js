@@ -3,12 +3,15 @@
 const { app, BrowserWindow, ipcMain, screen, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 
 // 首次运行时默认填写的服务器地址（不带 /display）
 const DEFAULT_SERVER_URL = 'https://hotel.binbino.cn';
 
 let controlWin = null;
 let displayWin = null;
+let recoverTimer = null;
+let manualLocal = false;
 
 /* ---------------- 配置读写 ---------------- */
 
@@ -44,6 +47,58 @@ function normalizeBaseUrl(input) {
   return u;
 }
 
+function displayUrl(base) {
+  return base ? base + '/display' : '';
+}
+
+/* ---------------- 网络检测与酒店名缓存 ---------------- */
+
+// 检测服务器是否可达（主进程直接请求，不走页面缓存）
+function checkServer(url) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (ok) => {
+      if (!settled) { settled = true; resolve(ok); }
+    };
+    try {
+      const req = https.get(url, { timeout: 8000 }, (res) => {
+        done(res.statusCode >= 200 && res.statusCode < 400);
+        res.resume();
+      });
+      req.on('error', () => done(false));
+      req.on('timeout', () => { req.destroy(); done(false); });
+    } catch (e) {
+      done(false);
+    }
+  });
+}
+
+// 在线时缓存酒店名，供本地应急模式显示
+function cacheHotelName(base) {
+  if (!base) return;
+  let req;
+  req = https.get(base + '/api/display', { timeout: 8000 }, (res) => {
+    if (res.statusCode !== 200) { res.resume(); return; }
+    let body = '';
+    res.on('data', (c) => {
+      body += c;
+      if (body.length > 1e6) req.destroy();
+    });
+    res.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        if (data && data.hotel_name) {
+          const cfg = loadConfig();
+          cfg.hotel_name = data.hotel_name;
+          saveConfig(cfg);
+        }
+      } catch (e) { /* 忽略 */ }
+    });
+  });
+  req.on('error', () => {});
+  req.on('timeout', () => { req.destroy(); });
+}
+
 /* ---------------- 屏幕选择 ---------------- */
 
 function displayInfo() {
@@ -67,16 +122,8 @@ function chooseDisplay() {
 
 /* ---------------- 展示窗口 ---------------- */
 
-function openDisplay() {
+function createDisplayWindow() {
   const base = normalizeBaseUrl(loadConfig().serverUrl);
-  if (!base) return { ok: false, msg: '请先填写服务器地址' };
-
-  if (displayWin && !displayWin.isDestroyed()) {
-    displayWin.destroy();
-    displayWin = null;
-  }
-
-  const url = base + '/display';
   const target = chooseDisplay();
   const { x, y, width, height } = target.bounds;
 
@@ -102,8 +149,6 @@ function openDisplay() {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
   );
 
-  displayWin.loadURL(url);
-
   displayWin.once('ready-to-show', () => {
     try {
       displayWin.setBounds({ x, y, width, height });
@@ -114,21 +159,95 @@ function openDisplay() {
     displayWin.show();
   });
 
+  // 加载失败（服务器断线且无离线缓存）→ 自动切入本地应急模式
   displayWin.webContents.on('did-fail-load', (event, code, desc, failedUrl, isMainFrame) => {
     // code -3 为主动取消（例如 destroy），忽略
-    if (isMainFrame && code !== -3) {
-      displayWin.loadFile(path.join(__dirname, 'offline.html'), { query: { url } }).catch(() => {});
+    if (isMainFrame && code !== -3 && !manualLocal) {
+      showEmergency();
     }
+  });
+
+  // 成功加载线上页面时缓存酒店名
+  displayWin.webContents.on('did-finish-load', () => {
+    const cur = displayWin && !displayWin.isDestroyed() ? displayWin.webContents.getURL() : '';
+    if (cur.startsWith(displayUrl(base))) cacheHotelName(base);
   });
 
   displayWin.on('closed', () => {
     displayWin = null;
+    stopRecoverTimer();
   });
+}
 
-  return { ok: true, url, width, height };
+function openDisplay() {
+  const base = normalizeBaseUrl(loadConfig().serverUrl);
+  if (!base) return { ok: false, msg: '请先填写服务器地址' };
+
+  if (displayWin && !displayWin.isDestroyed()) {
+    displayWin.destroy();
+    displayWin = null;
+  }
+  manualLocal = false;
+  stopRecoverTimer();
+
+  createDisplayWindow();
+  displayWin.loadURL(displayUrl(base));
+  return { ok: true, url: displayUrl(base), width: chooseDisplay().bounds.width };
+}
+
+/* ---------------- 本地应急模式 ---------------- */
+
+function showEmergency() {
+  if (!displayWin || displayWin.isDestroyed()) return;
+  const cfg = loadConfig();
+  displayWin
+    .loadFile(path.join(__dirname, 'emergency.html'), { query: { name: cfg.hotel_name || '' } })
+    .catch(() => {});
+  startRecoverTimer();
+}
+
+// 每 30 秒探测一次服务器，恢复后自动切回线上
+function startRecoverTimer() {
+  stopRecoverTimer();
+  recoverTimer = setInterval(async () => {
+    if (manualLocal) return;
+    const base = normalizeBaseUrl(loadConfig().serverUrl);
+    const url = displayUrl(base);
+    if (!url) return;
+    const ok = await checkServer(url);
+    if (ok) {
+      stopRecoverTimer();
+      if (displayWin && !displayWin.isDestroyed()) displayWin.loadURL(url);
+    }
+  }, 30000);
+}
+
+function stopRecoverTimer() {
+  if (recoverTimer) {
+    clearInterval(recoverTimer);
+    recoverTimer = null;
+  }
+}
+
+// 手动进入本地模式（不自动切回，直到点「播放」恢复）
+function enterLocalMode() {
+  const base = normalizeBaseUrl(loadConfig().serverUrl);
+  if (!base) return { ok: false, msg: '请先填写服务器地址' };
+  manualLocal = true;
+  stopRecoverTimer();
+  if (!displayWin || displayWin.isDestroyed()) {
+    createDisplayWindow();
+  }
+  const cfg = loadConfig();
+  displayWin
+    .loadFile(path.join(__dirname, 'emergency.html'), { query: { name: cfg.hotel_name || '' } })
+    .catch(() => {});
+  return { ok: true };
 }
 
 function closeDisplay() {
+  manualLocal = false;
+  stopRecoverTimer();
   if (displayWin && !displayWin.isDestroyed()) {
     displayWin.destroy();
     displayWin = null;
@@ -142,7 +261,7 @@ function closeDisplay() {
 function createControlWindow() {
   controlWin = new BrowserWindow({
     width: 470,
-    height: 660,
+    height: 700,
     resizable: false,
     title: '房价牌播放器',
     autoHideMenuBar: true,
@@ -175,15 +294,16 @@ function registerIpc() {
     if (!displayWin || displayWin.isDestroyed() || !base) {
       return { ok: false, msg: '当前没有在播放' };
     }
-    const displayUrl = base + '/display';
+    const url = displayUrl(base);
     const current = displayWin.webContents.getURL();
-    if (current && current.startsWith(displayUrl)) {
+    if (current && current.startsWith(url)) {
       displayWin.webContents.reloadIgnoringCache();
     } else {
-      displayWin.loadURL(displayUrl);
+      displayWin.loadURL(url);
     }
     return { ok: true };
   });
+  ipcMain.handle('local-mode', () => enterLocalMode());
   ipcMain.handle('open-admin', () => {
     const base = normalizeBaseUrl(loadConfig().serverUrl);
     if (!base) return { ok: false, msg: '请先填写服务器地址' };
@@ -193,7 +313,7 @@ function registerIpc() {
   ipcMain.handle('get-urls', () => {
     const base = normalizeBaseUrl(loadConfig().serverUrl);
     return {
-      display: base ? base + '/display' : '',
+      display: displayUrl(base),
       admin: base ? base + '/admin' : '',
     };
   });

@@ -27,7 +27,7 @@ trap 'rm -rf "$WORK"' EXIT
 unzip -q "$ZIP" -d "$WORK/app"
 
 mkdir -p "$WORK/app/resources/app"
-cp main.js control.html offline.html package.json "$WORK/app/resources/app/"
+cp main.js control.html emergency.html package.json "$WORK/app/resources/app/"
 rm -f "$WORK/app/resources/default_app.asar"
 mv "$WORK/app/electron.exe" "$WORK/app/${APP_NAME}.exe"
 

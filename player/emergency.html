@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>柏维酒店</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: linear-gradient(160deg, #020B18 0%, #061B34 60%, #020B18 100%);
+      overflow: hidden;
+      color: #fff;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    body { display: flex; align-items: center; justify-content: center; }
+    .box { text-align: center; }
+    .brand {
+      font-family: "Source Han Serif SC", "思源宋体", "Noto Serif SC", serif;
+      font-size: 72px;
+      font-weight: 700;
+      color: #D8B56A;
+      letter-spacing: 6px;
+    }
+    .sub {
+      margin-top: 10px;
+      font-size: 22px;
+      letter-spacing: 8px;
+      color: rgba(216, 181, 106, 0.9);
+    }
+    .time {
+      margin-top: 48px;
+      font-family: "DIN", "DIN Alternate", "Roboto", sans-serif;
+      font-size: 150px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 2px;
+    }
+    .date {
+      margin-top: 18px;
+      font-size: 30px;
+      color: rgba(255, 255, 255, 0.75);
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="brand" id="brand">柏维酒店</div>
+    <div class="sub">BIWY HOTEL</div>
+    <div class="time" id="time">--:--</div>
+    <div class="date" id="date"></div>
+  </div>
+  <script>
+    // 完全本地运行：时钟使用电脑本地时间，断电/断网均不受影响
+    const params = new URLSearchParams(location.search);
+    const name = params.get('name') || '';
+    if (name) document.getElementById('brand').textContent = name;
+
+    const WEEK = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    const pad = (n) => String(n).padStart(2, '0');
+
+    function tick() {
+      const now = new Date();
+      document.getElementById('time').textContent =
+        pad(now.getHours()) + ':' + pad(now.getMinutes());
+      document.getElementById('date').textContent =
+        now.getFullYear() + '/' + pad(now.getMonth() + 1) + '/' + pad(now.getDate()) +
+        ' ' + WEEK[now.getDay()];
+    }
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
