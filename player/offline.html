@@ -2,50 +2,41 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>无法连接服务器</title>
+  <title>待机</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      height: 100vh;
+      height: 100%;
+      background: linear-gradient(160deg, #020B18 0%, #061B34 60%, #020B18 100%);
+      overflow: hidden;
+    }
+    body {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0c0c0c;
-      color: #f2efe6;
-      font-family: "Microsoft YaHei", sans-serif;
     }
-    .box { text-align: center; padding: 40px; }
-    .icon { font-size: 56px; margin-bottom: 16px; }
-    h2 { font-size: 22px; font-weight: 600; margin: 0 0 10px; }
-    p { color: #9a968c; font-size: 14px; margin: 0 0 24px; line-height: 1.8; }
-    button {
-      border: none;
-      border-radius: 10px;
-      padding: 12px 28px;
-      font-size: 16px;
-      cursor: pointer;
-      background: linear-gradient(160deg, #e8c96a, #8a7330);
-      color: #1a1405;
-      font-weight: 700;
+    /* 金色呼吸圆点：无任何文字，客人只会看到类似屏保的画面 */
+    .pulse {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #D8B56A;
+      box-shadow: 0 0 24px rgba(216, 181, 106, 0.55);
+      animation: breathe 2.6s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: 0.12; transform: scale(0.75); }
+      50% { opacity: 0.75; transform: scale(1.2); }
     }
   </style>
 </head>
 <body>
-  <div class="box">
-    <div class="icon">📡</div>
-    <h2>无法连接服务器</h2>
-    <p>请检查网络，以及播放器里填写的服务器地址是否正确。</p>
-    <button id="retry">重新连接</button>
-  </div>
+  <div class="pulse"></div>
   <script>
+    // 静默自动重连：每 30 秒尝试一次，服务器恢复后自动恢复显示，无需人工干预
     const params = new URLSearchParams(location.search);
     const url = params.get('url') || '';
-    // 自动重连：每 30 秒尝试一次，服务器恢复后自动重新显示房价牌，无需人工干预
     if (url) setInterval(() => { location.href = url; }, 30000);
-    document.getElementById('retry').addEventListener('click', () => {
-      if (url) location.href = url;
-      else location.reload();
-    });
   </script>
 </body>
 </html>
