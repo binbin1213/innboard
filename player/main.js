@@ -115,7 +115,7 @@ function log(msg) {
   } catch (e) { /* 忽略日志错误 */ }
 }
 
-function downloadFile(url, timeout = 15000, redirects = 5) {
+function downloadFile(url, timeout = 30000, redirects = 5) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https:') ? https : http;
     const req = mod.get(url, { timeout }, (res) => {
@@ -137,6 +137,21 @@ function downloadFile(url, timeout = 15000, redirects = 5) {
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error('超时')); });
   });
+}
+
+// 下载失败自动重试（网络抖动时避免整体缓存失败）
+async function downloadWithRetry(url, attempts = 3) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await downloadFile(url);
+    } catch (e) {
+      lastErr = e;
+      log('下载重试(' + (i + 1) + '/' + attempts + '): ' + url + ' ' + e.message);
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  throw lastErr;
 }
 
 // 本地服务器：把缓存的快照原样伺服（URL 结构与线上一致，页面无需任何改动）
@@ -210,21 +225,21 @@ async function cacheSnapshot() {
   fs.mkdirSync(path.join(snapDir, 'uploads'), { recursive: true });
   log('开始手动缓存: ' + base);
   try {
-    // 1) 展示页 HTML
-    const htmlBuf = await downloadFile(base + '/display');
+    // 1) 展示页 HTML（失败自动重试）
+    const htmlBuf = await downloadWithRetry(base + '/display');
     // 2) 页面引用的静态资源
     const html = htmlBuf.toString('utf8');
     const assetUrls = [...html.matchAll(/["'](\/assets\/[^"']+)["']/g)].map((m) => m[1]);
     log('页面资源: ' + JSON.stringify(assetUrls));
     for (const p of assetUrls) {
       try {
-        const buf = await downloadFile(base + p);
+        const buf = await downloadWithRetry(base + p, 2);
         fs.writeFileSync(path.join(snapDir, p.replace(/^\//, '')), buf);
       } catch (e) { log('资源失败(忽略): ' + p + ' ' + e.message); }
     }
     fs.writeFileSync(path.join(snapDir, 'index.html'), htmlBuf);
-    // 3) 展示数据
-    const apiBuf = await downloadFile(base + '/api/display');
+    // 3) 展示数据（失败自动重试）
+    const apiBuf = await downloadWithRetry(base + '/api/display');
     const apiData = JSON.parse(apiBuf.toString('utf8'));
     // 4) 数据中的图片（logo / 二维码 / 轮播图 / 欢迎背景）
     const imgUrls = [];
@@ -238,7 +253,7 @@ async function cacheSnapshot() {
     log('图片: ' + JSON.stringify(imgUrls));
     for (const p of imgUrls) {
       try {
-        const buf = await downloadFile(base + p);
+        const buf = await downloadWithRetry(base + p, 2);
         fs.writeFileSync(path.join(snapDir, p.replace(/^\//, '')), buf);
       } catch (e) { log('图片失败(忽略): ' + p + ' ' + e.message); }
     }
