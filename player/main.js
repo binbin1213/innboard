@@ -226,11 +226,15 @@ async function cacheSnapshot() {
     // 3) 展示数据
     const apiBuf = await downloadFile(base + '/api/display');
     const apiData = JSON.parse(apiBuf.toString('utf8'));
-    // 4) 数据中的图片（logo / 二维码 / 轮播图）
+    // 4) 数据中的图片（logo / 二维码 / 轮播图 / 欢迎背景）
     const imgUrls = [];
     if (apiData.logo_url) imgUrls.push(apiData.logo_url);
     if (apiData.qr_url) imgUrls.push(apiData.qr_url);
-    (apiData.images || []).forEach((im) => { if (im && im.url) imgUrls.push(im.url); });
+    if (Array.isArray(apiData.images)) {
+      apiData.images.forEach((u) => { if (typeof u === 'string' && u) imgUrls.push(u); });
+    }
+    const welcome = apiData.welcome || {};
+    if (welcome.image_url) imgUrls.push(welcome.image_url);
     log('图片: ' + JSON.stringify(imgUrls));
     for (const p of imgUrls) {
       try {
