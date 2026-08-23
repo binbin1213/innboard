@@ -13,6 +13,7 @@ let controlWin = null;
 let displayWin = null;
 let recoverTimer = null;
 let manualLocal = false;
+let caching = false;
 
 /* ---------------- 配置读写 ---------------- */
 
@@ -103,17 +104,31 @@ function cacheHotelName(base) {
 /* ---------------- 本地快照（手动缓存完整页面） ---------------- */
 
 const SNAP_DIR = () => path.join(app.getPath('userData'), 'snapshot');
+const LOG_FILE = () => path.join(app.getPath('userData'), 'player.log');
 let localServer = null;
 let localPort = null;
 
-function downloadFile(url, timeout = 15000) {
+// 简单日志：方便排查问题（如缓存失败原因）
+function log(msg) {
+  try {
+    fs.appendFileSync(LOG_FILE(), `${new Date().toLocaleString('zh-CN', { hour12: false })} ${msg}\n`);
+  } catch (e) { /* 忽略日志错误 */ }
+}
+
+function downloadFile(url, timeout = 15000, redirects = 5) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https:') ? https : http;
     const req = mod.get(url, { timeout }, (res) => {
+      // 跟随重定向
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        if (redirects <= 0) return reject(new Error('重定向过多'));
+        const next = new URL(res.headers.location, url).href;
+        return resolve(downloadFile(next, timeout, redirects - 1));
+      }
       if (res.statusCode !== 200) {
         res.resume();
-        reject(new Error('HTTP ' + res.statusCode));
-        return;
+        return reject(new Error('HTTP ' + res.statusCode));
       }
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
@@ -186,22 +201,26 @@ function snapshotExists() {
 
 // 手动缓存：下载完整展示页（HTML + JS/CSS + 数据 + 图片）到本地
 async function cacheSnapshot() {
+  if (caching) return { ok: false, msg: '正在缓存中，请稍候' };
+  caching = true;
   const base = normalizeBaseUrl(loadConfig().serverUrl);
-  if (!base) return { ok: false, msg: '请先填写服务器地址' };
+  if (!base) { caching = false; return { ok: false, msg: '请先填写服务器地址' }; }
   const snapDir = SNAP_DIR();
   fs.mkdirSync(path.join(snapDir, 'assets'), { recursive: true });
   fs.mkdirSync(path.join(snapDir, 'uploads'), { recursive: true });
+  log('开始手动缓存: ' + base);
   try {
     // 1) 展示页 HTML
     const htmlBuf = await downloadFile(base + '/display');
     // 2) 页面引用的静态资源
     const html = htmlBuf.toString('utf8');
     const assetUrls = [...html.matchAll(/["'](\/assets\/[^"']+)["']/g)].map((m) => m[1]);
+    log('页面资源: ' + JSON.stringify(assetUrls));
     for (const p of assetUrls) {
       try {
         const buf = await downloadFile(base + p);
         fs.writeFileSync(path.join(snapDir, p.replace(/^\//, '')), buf);
-      } catch (e) { /* 单个资源失败不阻断 */ }
+      } catch (e) { log('资源失败(忽略): ' + p + ' ' + e.message); }
     }
     fs.writeFileSync(path.join(snapDir, 'index.html'), htmlBuf);
     // 3) 展示数据
@@ -212,17 +231,22 @@ async function cacheSnapshot() {
     if (apiData.logo_url) imgUrls.push(apiData.logo_url);
     if (apiData.qr_url) imgUrls.push(apiData.qr_url);
     (apiData.images || []).forEach((im) => { if (im && im.url) imgUrls.push(im.url); });
+    log('图片: ' + JSON.stringify(imgUrls));
     for (const p of imgUrls) {
       try {
         const buf = await downloadFile(base + p);
         fs.writeFileSync(path.join(snapDir, p.replace(/^\//, '')), buf);
-      } catch (e) { /* 忽略单个图片失败 */ }
+      } catch (e) { log('图片失败(忽略): ' + p + ' ' + e.message); }
     }
     fs.writeFileSync(path.join(snapDir, 'api.json'), apiBuf);
     await startLocalServer();
+    log('手动缓存成功');
     return { ok: true };
   } catch (e) {
+    log('手动缓存失败: ' + (e && e.stack ? e.stack : e));
     return { ok: false, msg: '缓存失败：' + (e.message || '未知错误') };
+  } finally {
+    caching = false;
   }
 }
 
@@ -319,6 +343,7 @@ function openDisplay() {
 
   createDisplayWindow();
   displayWin.loadURL(displayUrl(base));
+  log('播放: ' + displayUrl(base));
   return { ok: true, url: displayUrl(base), width: chooseDisplay().bounds.width };
 }
 
@@ -379,6 +404,7 @@ async function enterLocalMode() {
     createDisplayWindow();
   }
   displayWin.loadURL(`http://127.0.0.1:${port}/display`);
+  log('本地模式: http://127.0.0.1:' + port + '/display');
   return { ok: true };
 }
 
