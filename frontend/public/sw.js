@@ -1,9 +1,17 @@
 // 展示页离线缓存 Service Worker
 // 策略：页面 / 数据「网络优先、失败用缓存」，静态资源「缓存优先、后台更新」。
-// 服务器断网时，电视仍能显示最后一次成功加载的内容，客人无感知。
-const CACHE = 'innboard-v1'
+// 服务器断电/断网时，电视仍能完整显示最后一次成功加载的内容，客人无感知。
+const CACHE = 'innboard-v2'
 
-self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('install', (event) => {
+  self.skipWaiting()
+  // 首次安装就把展示页 HTML 预缓存，保证断电/断网重开页面也能加载
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => Promise.all(['/display', '/'].map((u) => cache.add(u).catch(() => {}))))
+  )
+})
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(

@@ -40,6 +40,8 @@
   <script>
     const params = new URLSearchParams(location.search);
     const url = params.get('url') || '';
+    // 自动重连：每 30 秒尝试一次，服务器恢复后自动重新显示房价牌，无需人工干预
+    if (url) setInterval(() => { location.href = url; }, 30000);
     document.getElementById('retry').addEventListener('click', () => {
       if (url) location.href = url;
       else location.reload();
