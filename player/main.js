@@ -398,8 +398,8 @@ function closeDisplay() {
 function createControlWindow() {
   controlWin = new BrowserWindow({
     width: 470,
-    height: 700,
-    resizable: false,
+    height: 800,
+    resizable: true,
     title: '房价牌播放器',
     autoHideMenuBar: true,
     webPreferences: {

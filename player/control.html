@@ -226,13 +226,13 @@
 
     $local.addEventListener('click', async () => {
       const r = await ipcRenderer.invoke('local-mode');
-      setStatus(r.ok ? '已切换到本地模式（电视显示缓存的房价牌页面）' : `切换失败：${(r && r.msg) || '未知错误'}`);
+      setStatus(r.ok ? '已切换到本地模式' : `切换失败：${(r && r.msg) || '未知错误'}`);
     });
 
     $cache.addEventListener('click', async () => {
-      setStatus('正在下载缓存（页面 + 数据 + 图片）…');
+      setStatus('正在下载缓存…');
       const r = await ipcRenderer.invoke('cache-snapshot');
-      setStatus(r.ok ? '缓存成功！已保存完整页面，断网时点「本地模式」即可显示' : `缓存失败：${(r && r.msg) || '未知错误'}`);
+      setStatus(r.ok ? '缓存成功！已保存完整页面' : `缓存失败：${(r && r.msg) || '未知错误'}`);
     });
 
     $admin.addEventListener('click', async () => {
