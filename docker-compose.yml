@@ -11,3 +11,19 @@ services:
       - ./uploads:/app/backend/uploads
     environment:
       - TZ=Asia/Shanghai
+      # APP_ENV=development   设为 development 可开启 /docs 接口文档（生产默认关闭）
+      # ALLOWED_ORIGINS=https://example.com   本地开发跨域时放开，默认同源无需配置
+      # LOG_LEVEL=INFO
+      # MAINTENANCE_INTERVAL_HOURS=24   孤儿文件清理与数据库备份的执行间隔
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')",
+        ]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

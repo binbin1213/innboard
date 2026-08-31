@@ -1,3 +1,5 @@
+import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -7,10 +9,43 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
+from .auth import purge_expired_sessions
 from .database import BASE_DIR, UPLOAD_DIR, Base, SessionLocal, engine
+from .maintenance import run_maintenance, start_maintenance_worker
 from .routers import admin, auth, display
 from .seed import seed_data
 from .settings import ensure_defaults
+
+APP_ENV = os.getenv("APP_ENV", "production").lower()
+IS_PRODUCTION = APP_ENV == "production"
+
+# 前端与后端同源部署，默认不需要跨域；本地开发时通过环境变量放开
+ALLOWED_ORIGINS = [o for o in (x.strip() for x in os.getenv("ALLOWED_ORIGINS", "").split(",")) if o]
+MAINTENANCE_INTERVAL_HOURS = float(os.getenv("MAINTENANCE_INTERVAL_HOURS", "24"))
+
+LOG_FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+
+
+def configure_logging() -> None:
+    """uvicorn 会先配置 root logger，这里统一成项目自己的格式。"""
+    root = logging.getLogger()
+    root.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
+    formatter = logging.Formatter(LOG_FORMAT)
+    if not root.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        root.addHandler(handler)
+    else:
+        for handler in root.handlers:
+            handler.setFormatter(formatter)
+
+    # 第三方库的 INFO 日志噪音很大（每条出站请求都会记一条），只保留告警及以上
+    for noisy in ("httpx", "httpcore", "uvicorn.access"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
+configure_logging()
+logger = logging.getLogger("innboard")
 
 
 class CachedStaticFiles(StaticFiles):
@@ -47,12 +82,31 @@ async def lifespan(_: FastAPI):
     try:
         ensure_defaults(db)
         seed_data(db)
+        purge_expired_sessions(db)
     finally:
         db.close()
+
+    try:
+        run_maintenance()
+    except Exception:
+        logger.exception("启动维护任务失败，服务继续启动")
+    start_maintenance_worker(MAINTENANCE_INTERVAL_HOURS)
+    logger.info("服务启动完成（环境: %s）", APP_ENV)
     yield
 
 
-app = FastAPI(title="酒店智能房价牌", lifespan=lifespan)
+app = FastAPI(
+    title="酒店智能房价牌",
+    lifespan=lifespan,
+    # 生产环境不暴露接口文档，避免接口结构外泄
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
+)
+
+# 这两个接口允许客户端缓存后再校验（配合 ETag 返回 304），其余 API 一律不缓存
+REVALIDATE_PATHS = {"/api/display"}
+
 
 class NoStoreMiddleware:
     def __init__(self, app):
@@ -66,28 +120,35 @@ class NoStoreMiddleware:
 
         async def send_wrapper(message):
             if message["type"] == "http.response.start" and path.startswith("/api/"):
+                value = b"no-cache" if path in REVALIDATE_PATHS else b"no-store"
                 headers = [(k, v) for k, v in message.get("headers", []) if k.lower() != b"cache-control"]
-                headers.append((b"cache-control", b"no-store"))
+                headers.append((b"cache-control", value))
                 message["headers"] = headers
             await send(message)
 
         await self.app(scope, receive, send_wrapper)
 
 
-
 app.add_middleware(NoStoreMiddleware)
 
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if ALLOWED_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.info("已启用跨域访问，允许的来源: %s", ALLOWED_ORIGINS)
 
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(display.router)
+
+
+@app.get("/api/health", tags=["system"])
+def health():
+    return {"status": "ok", "env": APP_ENV}
+
 
 app.mount("/uploads", CachedStaticFiles(directory=UPLOAD_DIR), name="uploads")
 
@@ -96,8 +157,10 @@ if DIST_DIR.exists():
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str):
-        candidate = DIST_DIR / full_path
-        if full_path and candidate.is_file():
+        # 必须解析真实路径并校验落在 dist 内，否则 /../../ 可越过目录读取任意文件
+        dist_root = DIST_DIR.resolve()
+        candidate = (DIST_DIR / full_path).resolve() if full_path else None
+        if candidate and candidate.is_file() and candidate.is_relative_to(dist_root):
             return no_cache_response(candidate)
         return no_cache_response(DIST_DIR / "index.html")
 

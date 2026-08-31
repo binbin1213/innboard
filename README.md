@@ -62,9 +62,46 @@ cd ../backend && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 ## 默认账号
 
 - 用户名：`admin`
-- 密码：`admin123`
+- 密码：**首次启动自动生成**
 
-> 首次登录后请立即在「系统设置 → 修改登录密码」中修改，并建议公网部署时启用 HTTPS、限制后台访问来源。
+首次启动时系统生成一个随机密码，同时：
+
+1. 打印到启动日志
+2. 写入 `backend/data/initial_password.txt`
+
+登录后请立即在「系统设置 → 修改登录密码」中修改，修改成功后 `initial_password.txt` 会自动删除。
+
+> 不再提供固定默认密码，避免部署后忘记修改形成公开后门。公网部署请启用 HTTPS 并限制后台访问来源。
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `APP_ENV` | `production` | 设为 `development` 可开启 `/docs` 接口文档，生产默认关闭 |
+| `ALLOWED_ORIGINS` | 空 | 允许跨域的来源，逗号分隔。前后端同源部署时无需配置 |
+| `LOG_LEVEL` | `INFO` | 日志级别 |
+| `MAINTENANCE_INTERVAL_HOURS` | `24` | 孤儿文件检查与数据库备份的执行间隔 |
+| `CLEANUP_ORPHAN_UPLOADS` | `0` | 设为 `1` 才把未被引用的上传文件移入 `data/trash/`（默认只告警不移动） |
+| `TRASH_KEEP_DAYS` | `30` | 回收目录内文件的保留天数 |
+| `INNBOARD_DATA_DIR` | `backend/data` | 数据与数据库目录，测试时用于隔离 |
+| `INNBOARD_UPLOAD_DIR` | `backend/uploads` | 上传文件目录 |
+
+数据安全相关的默认行为：
+
+- SQLite 运行在 WAL 模式，并启用外键约束
+- 数据库每次启动与每 `MAINTENANCE_INTERVAL_HOURS` 小时备份一次到 `data/backups/`，保留最近 7 份
+- 上传文件按真实文件头校验类型，伪装成图片的非法内容会被拒绝
+- 登录失败 5 次后锁定来源 5 分钟
+
+## 测试
+
+```bash
+cd backend
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest tests/ -q
+```
+
+测试使用独立的临时数据目录，不会读写真实的 `data/hotel.db`。
 
 ## 设计文档
 

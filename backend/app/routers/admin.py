@@ -1,19 +1,34 @@
+import logging
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..auth import require_auth
 from ..database import UPLOAD_DIR, get_db
 from ..models import Announcement, Image, PriceLog, Room, Setting
 from ..settings import get_setting, set_setting
+from ..uploads import validate_image
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["admin"])
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 SIZE_LIMIT = 20 * 1024 * 1024
+
+
+def next_sort_order(db: Session, model) -> int:
+    """取当前最大排序值 +1。
+
+    不能用 count()：删除记录后 count 会小于最大 sort_order，
+    导致新建记录与已有记录撞号，排序结果不稳定。
+    """
+    current_max = db.query(func.max(model.sort_order)).scalar()
+    return (current_max if current_max is not None else -1) + 1
 
 
 def room_dict(r: Room) -> dict:
@@ -29,6 +44,26 @@ def room_dict(r: Room) -> dict:
     }
 
 
+def discard_upload(filename: str) -> None:
+    """落盘后数据库写入失败时回收文件，避免留下孤儿文件。"""
+    if not filename:
+        return
+    try:
+        (UPLOAD_DIR / filename).unlink()
+    except OSError:
+        logger.warning("回收上传文件失败: %s", filename, exc_info=True)
+
+
+def _unlink_upload(filename: str) -> None:
+    """删除被替换掉的旧文件，失败不影响主流程。"""
+    if not filename:
+        return
+    try:
+        (UPLOAD_DIR / filename).unlink()
+    except OSError:
+        logger.warning("删除旧文件失败: %s", filename, exc_info=True)
+
+
 async def save_upload(file: UploadFile) -> str:
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_EXT:
@@ -36,7 +71,12 @@ async def save_upload(file: UploadFile) -> str:
     content = await file.read(SIZE_LIMIT + 1)
     if len(content) > SIZE_LIMIT:
         raise HTTPException(status_code=400, detail="图片大小不能超过 20MB")
-    filename = f"{uuid.uuid4().hex}{ext}"
+    try:
+        # 以文件真实类型存盘，防止把伪装成图片的文件写进 uploads
+        real_ext = validate_image(content, ext)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    filename = f"{uuid.uuid4().hex}{real_ext}"
     (UPLOAD_DIR / filename).write_bytes(content)
     return filename
 
@@ -78,7 +118,7 @@ def create_room(body: RoomCreate, db: Session = Depends(get_db), _: str = Depend
         raise HTTPException(status_code=400, detail="价格不能为负数")
     if body.remaining_rooms is not None and body.remaining_rooms < 0:
         raise HTTPException(status_code=400, detail="剩余间数不能为负数")
-    max_order = db.query(Room).count()
+    max_order = next_sort_order(db, Room)
     room = Room(
         name=body.name.strip(),
         rack_price=body.rack_price,
@@ -89,6 +129,7 @@ def create_room(body: RoomCreate, db: Session = Depends(get_db), _: str = Depend
     )
     db.add(room)
     db.commit()
+    logger.info("新增房型: %s（门市价 %s / 会员价 %s）", room.name, room.rack_price, room.member_price)
     return room_dict(room)
 
 
@@ -130,6 +171,10 @@ def update_room(room_id: int, body: RoomUpdate, db: Session = Depends(get_db), _
     if body.sold_out is not None:
         room.sold_out = body.sold_out
     db.commit()
+    logger.info(
+        "修改房型 #%s %s：门市价 %s->%s，会员价 %s->%s",
+        room.id, room.name, old_rack, room.rack_price, old_member, room.member_price,
+    )
     return room_dict(room)
 
 
@@ -138,8 +183,11 @@ def delete_room(room_id: int, db: Session = Depends(get_db), _: str = Depends(re
     room = db.get(Room, room_id)
     if not room:
         raise HTTPException(status_code=404, detail="房型不存在")
+    # 数据库已启用外键约束，需先清理关联的价格日志
+    db.query(PriceLog).filter(PriceLog.room_id == room_id).delete(synchronize_session=False)
     db.delete(room)
     db.commit()
+    logger.info("删除房型 #%s %s", room_id, room.name)
     return {"ok": True}
 
 
@@ -184,9 +232,16 @@ def list_images(db: Session = Depends(get_db), _: str = Depends(require_auth)):
 @router.post("/images")
 async def upload_image(file: UploadFile = File(...), db: Session = Depends(get_db), _: str = Depends(require_auth)):
     filename = await save_upload(file)
-    image = Image(filename=filename, sort_order=db.query(Image).count())
-    db.add(image)
-    db.commit()
+    try:
+        image = Image(filename=filename, sort_order=next_sort_order(db, Image))
+        db.add(image)
+        db.commit()
+    except Exception:
+        db.rollback()
+        discard_upload(filename)
+        logger.exception("图片入库失败")
+        raise
+    logger.info("上传图片: %s", filename)
     return {"id": image.id, "url": f"/uploads/{image.filename}"}
 
 
@@ -195,11 +250,10 @@ def delete_image(image_id: int, db: Session = Depends(get_db), _: str = Depends(
     image = db.get(Image, image_id)
     if not image:
         raise HTTPException(status_code=404, detail="图片不存在")
-    path = UPLOAD_DIR / image.filename
-    if path.exists():
-        path.unlink()
     db.delete(image)
     db.commit()
+    _unlink_upload(image.filename)
+    logger.info("删除图片 #%s %s", image_id, image.filename)
     return {"ok": True}
 
 
@@ -229,9 +283,10 @@ def list_announcements(db: Session = Depends(get_db), _: str = Depends(require_a
 def create_announcement(body: AnnouncementBody, db: Session = Depends(get_db), _: str = Depends(require_auth)):
     if not body.text.strip():
         raise HTTPException(status_code=400, detail="公告内容不能为空")
-    item = Announcement(text=body.text.strip(), sort_order=db.query(Announcement).count())
+    item = Announcement(text=body.text.strip(), sort_order=next_sort_order(db, Announcement))
     db.add(item)
     db.commit()
+    logger.info("新增公告: %s", item.text[:30])
     return {"id": item.id, "text": item.text, "sort_order": item.sort_order}
 
 
@@ -271,6 +326,7 @@ def reorder_announcements(body: ReorderBody, db: Session = Depends(get_db), _: s
 
 class SettingsBody(BaseModel):
     hotel_name: str | None = None
+    hotel_name_en: str | None = None
     carousel_interval: int | None = None
     weather_api_key: str | None = None
     weather_city: str | None = None
@@ -283,6 +339,7 @@ def get_settings(db: Session = Depends(get_db), _: str = Depends(require_auth)):
     qr = get_setting(db, "qr_filename")
     return {
         "hotel_name": get_setting(db, "hotel_name"),
+        "hotel_name_en": get_setting(db, "hotel_name_en"),
         "carousel_interval": int(get_setting(db, "carousel_interval", "5")),
         "weather_api_key": get_setting(db, "weather_api_key"),
         "weather_city": get_setting(db, "weather_city"),
@@ -296,6 +353,8 @@ def get_settings(db: Session = Depends(get_db), _: str = Depends(require_auth)):
 def update_settings(body: SettingsBody, db: Session = Depends(get_db), _: str = Depends(require_auth)):
     if body.hotel_name is not None:
         set_setting(db, "hotel_name", body.hotel_name.strip())
+    if body.hotel_name_en is not None:
+        set_setting(db, "hotel_name_en", body.hotel_name_en.strip())
     if body.carousel_interval is not None:
         if not 3 <= body.carousel_interval <= 60:
             raise HTTPException(status_code=400, detail="轮播间隔需在 3～60 秒之间")
@@ -309,6 +368,8 @@ def update_settings(body: SettingsBody, db: Session = Depends(get_db), _: str = 
     if body.weather_city is not None:
         set_setting(db, "weather_city", body.weather_city.strip())
     db.commit()
+    changed = ", ".join(body.model_fields_set) or "无"
+    logger.info("更新系统设置，变更字段: %s", changed)
     return get_settings(db, _)
 
 
@@ -316,12 +377,16 @@ def update_settings(body: SettingsBody, db: Session = Depends(get_db), _: str = 
 async def upload_logo(file: UploadFile = File(...), db: Session = Depends(get_db), _: str = Depends(require_auth)):
     filename = await save_upload(file)
     old = get_setting(db, "logo_filename")
-    if old:
-        old_path = UPLOAD_DIR / old
-        if old_path.exists():
-            old_path.unlink()
-    set_setting(db, "logo_filename", filename)
-    db.commit()
+    try:
+        set_setting(db, "logo_filename", filename)
+        db.commit()
+    except Exception:
+        db.rollback()
+        discard_upload(filename)
+        logger.exception("LOGO 入库失败")
+        raise
+    _unlink_upload(old)
+    logger.info("更新 LOGO: %s", filename)
     return {"logo_url": f"/uploads/{filename}"}
 
 
@@ -329,12 +394,16 @@ async def upload_logo(file: UploadFile = File(...), db: Session = Depends(get_db
 async def upload_qr(file: UploadFile = File(...), db: Session = Depends(get_db), _: str = Depends(require_auth)):
     filename = await save_upload(file)
     old = get_setting(db, "qr_filename")
-    if old:
-        old_path = UPLOAD_DIR / old
-        if old_path.exists():
-            old_path.unlink()
-    set_setting(db, "qr_filename", filename)
-    db.commit()
+    try:
+        set_setting(db, "qr_filename", filename)
+        db.commit()
+    except Exception:
+        db.rollback()
+        discard_upload(filename)
+        logger.exception("二维码入库失败")
+        raise
+    _unlink_upload(old)
+    logger.info("更新二维码: %s", filename)
     return {"qr_url": f"/uploads/{filename}"}
 
 
@@ -357,6 +426,7 @@ def welcome_dict(db: Session) -> dict:
         "message": get_setting(db, "welcome_message"),
         "image_url": f"/uploads/{logo}" if logo else "",
         "end_time": get_setting(db, "welcome_end_time"),
+        "hotel_name": get_setting(db, "hotel_name"),
     }
 
 
@@ -380,22 +450,24 @@ def update_welcome(body: WelcomeBody, db: Session = Depends(get_db), _: str = De
 async def upload_welcome_image(file: UploadFile = File(...), db: Session = Depends(get_db), _: str = Depends(require_auth)):
     filename = await save_upload(file)
     old = get_setting(db, "welcome_image_filename")
-    if old:
-        old_path = UPLOAD_DIR / old
-        if old_path.exists():
-            old_path.unlink()
-    set_setting(db, "welcome_image_filename", filename)
-    db.commit()
+    try:
+        set_setting(db, "welcome_image_filename", filename)
+        db.commit()
+    except Exception:
+        db.rollback()
+        discard_upload(filename)
+        logger.exception("欢迎背景图入库失败")
+        raise
+    _unlink_upload(old)
+    logger.info("更新欢迎背景图: %s", filename)
     return {"image_url": f"/uploads/{filename}"}
 
 
 @router.delete("/welcome/image")
 def delete_welcome_image(db: Session = Depends(get_db), _: str = Depends(require_auth)):
     old = get_setting(db, "welcome_image_filename")
-    if old:
-        old_path = UPLOAD_DIR / old
-        if old_path.exists():
-            old_path.unlink()
     set_setting(db, "welcome_image_filename", "")
     db.commit()
+    _unlink_upload(old)
+    logger.info("删除欢迎背景图")
     return {"ok": True}
