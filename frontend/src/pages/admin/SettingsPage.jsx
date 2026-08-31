@@ -2,6 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import { api, clearToken, uploadFile } from '../../api'
 import { useNavigate } from 'react-router-dom'
 
+// 背景主题预设（与展示页 THEMES 保持一致）
+const THEME_OPTIONS = [
+  { value: 'navy', name: '深蓝金', css: 'linear-gradient(180deg, #080f1c 0%, #0b1220 50%, #141f36 100%)' },
+  { value: 'green', name: '墨绿金', css: 'linear-gradient(180deg, #06120e 0%, #0a1a13 50%, #12301f 100%)' },
+  { value: 'wine', name: '酒红金', css: 'linear-gradient(180deg, #1a0a0e 0%, #260f16 50%, #3a1520 100%)' },
+  { value: 'black', name: '曜石黑', css: 'linear-gradient(180deg, #060606 0%, #0c0c0c 50%, #181818 100%)' },
+  { value: 'purple', name: '午夜蓝紫', css: 'linear-gradient(180deg, #0a0a1e 0%, #12102e 50%, #1e1a44 100%)' },
+  { value: 'brown', name: '暖棕金', css: 'linear-gradient(180deg, #160e08 0%, #20150c 50%, #332012 100%)' },
+]
+
+const FESTIVAL_OPTIONS = [
+  { value: '', name: '无' },
+  { value: 'spring', name: '春节' },
+  { value: 'dragon', name: '端午' },
+  { value: 'midautumn', name: '中秋' },
+  { value: 'national', name: '国庆' },
+]
+
 export default function SettingsPage() {
   const [form, setForm] = useState(null)
   const [logoUrl, setLogoUrl] = useState('')
@@ -26,6 +44,8 @@ export default function SettingsPage() {
         weather_api_key: res.weather_api_key,
         weather_city: res.weather_city,
         logo_size: String(res.logo_size),
+        theme: res.theme || 'navy',
+        festival: res.festival || '',
       })
       setLogoUrl(res.logo_url)
       setQrUrl(res.qr_url)
@@ -128,6 +148,37 @@ export default function SettingsPage() {
           onChange={(e) => setForm({ ...form, carousel_interval: e.target.value })}
           className="w-40 border rounded-lg px-3 py-2 mb-6"
         />
+        <label className="block text-sm text-gray-600 mb-1">展示页背景主题</label>
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {THEME_OPTIONS.map((t) => {
+            const active = form.theme === t.value
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setForm({ ...form, theme: t.value })}
+                className={`rounded-lg overflow-hidden border-2 transition ${
+                  active ? 'border-[#D4AF37] ring-2 ring-[#D4AF37]/30' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="h-12 w-full" style={{ background: t.css }} />
+                <div className={`py-1.5 text-sm ${active ? 'text-[#B8860B] font-semibold' : 'text-gray-600'}`}>
+                  {t.name}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+        <label className="block text-sm text-gray-600 mb-1">节日装饰（叠加在背景上的暗纹）</label>
+        <select
+          value={form.festival}
+          onChange={(e) => setForm({ ...form, festival: e.target.value })}
+          className="w-40 border rounded-lg px-3 py-2 mb-6 bg-white"
+        >
+          {FESTIVAL_OPTIONS.map((f) => (
+            <option key={f.value} value={f.value}>{f.name}</option>
+          ))}
+        </select>
         <button
           onClick={save}
           disabled={saving}

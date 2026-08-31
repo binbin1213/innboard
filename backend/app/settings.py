@@ -18,6 +18,8 @@ DEFAULT_SETTINGS = {
     "logo_filename": "",
     "logo_size": "96",
     "qr_filename": "",
+    "theme": "navy",
+    "festival": "",
 }
 
 INITIAL_PASSWORD_FILE = DATA_DIR / "initial_password.txt"

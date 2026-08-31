@@ -15,6 +15,200 @@ import {
 const STAGE_W = 1080
 const STAGE_H = 1920
 const POLL_MS = 30_000
+
+// 背景主题预设：纯 CSS 渐变，零图片体积。key 与后端 theme 字段对应。
+const THEMES = {
+  navy: {
+    name: '深蓝金',
+    css: 'linear-gradient(180deg, #080f1c 0%, #0b1220 50%, #141f36 100%)',
+    header: 'linear-gradient(90deg, #020B18 0%, #04152B 40%, #061B34 70%, #020B18 100%)',
+    accent: '#E8C872',
+  },
+  green: {
+    name: '墨绿金',
+    css: 'linear-gradient(180deg, #06120e 0%, #0a1a13 50%, #12301f 100%)',
+    header: 'linear-gradient(90deg, #020c08 0%, #04160e 40%, #062418 70%, #020c08 100%)',
+    accent: '#D8C06A',
+  },
+  wine: {
+    name: '酒红金',
+    css: 'linear-gradient(180deg, #1a0a0e 0%, #260f16 50%, #3a1520 100%)',
+    header: 'linear-gradient(90deg, #150608 0%, #200a10 40%, #2e1018 70%, #150608 100%)',
+    accent: '#E8C872',
+  },
+  black: {
+    name: '曜石黑',
+    css: 'linear-gradient(180deg, #060606 0%, #0c0c0c 50%, #181818 100%)',
+    header: 'linear-gradient(90deg, #030303 0%, #090909 40%, #101010 70%, #030303 100%)',
+    accent: '#E8C872',
+  },
+  purple: {
+    name: '午夜蓝紫',
+    css: 'linear-gradient(180deg, #0a0a1e 0%, #12102e 50%, #1e1a44 100%)',
+    header: 'linear-gradient(90deg, #07071a 0%, #0e0c26 40%, #171236 70%, #07071a 100%)',
+    accent: '#C8B6E8',
+  },
+  brown: {
+    name: '暖棕金',
+    css: 'linear-gradient(180deg, #160e08 0%, #20150c 50%, #332012 100%)',
+    header: 'linear-gradient(90deg, #100a05 0%, #1b120a 40%, #2a1d10 70%, #100a05 100%)',
+    accent: '#D8B06A',
+  },
+}
+
+// 节日装饰：SVG 实心剪影暗纹，用 accent 色低透明度浮在内容上层、不挡交互。
+// value 与后端 festival 字段对应。每个节日含多个「独立素材」，分别单独绘制、分散布置。
+const FESTIVALS = {
+  spring: {
+    name: '春节',
+    items: [
+      {
+        // 灯笼剪影（大红 + 金）
+        svg: `
+          <path d="M0 -8 l0 -26" stroke="#E8C872" stroke-width="4" opacity="0.18" fill="none"/>
+          <rect x="-6" y="-12" width="12" height="8" rx="2" fill="#E8C872" opacity="0.20"/>
+          <path d="M-40 8 a40 52 0 0 0 80 0 l-14 -34 a40 52 0 0 1 -52 0 Z" fill="#D23A2E" opacity="0.20"/>
+          <path d="M-24 60 a24 18 0 0 0 48 0 Z" fill="none" stroke="#E8C872" stroke-width="3" opacity="0.18"/>
+          <path d="M-18 66 l0 16 M0 70 l0 16 M18 66 l0 16" stroke="#E8C872" stroke-width="3" opacity="0.18"/>
+        `,
+        size: 180,
+        count: 3,
+      },
+      {
+        // 福字（金）
+        svg: `
+          <text x="0" y="0" font-size="120" fill="#E8C872" opacity="0.14" text-anchor="middle" dominant-baseline="middle" font-family="Songti SC, Noto Serif SC, serif" font-weight="700">福</text>
+        `,
+        size: 130,
+        count: 1,
+      },
+    ],
+  },
+  dragon: {
+    name: '端午',
+    items: [
+      {
+        // 粽子剪影（粽叶绿 + 金缠线）
+        svg: `
+          <path d="M0 -60 L56 26 L-56 26 Z" fill="#3E7C4F" opacity="0.18"/>
+          <path d="M-56 26 a56 30 0 0 0 112 0 Z" fill="#3E7C4F" opacity="0.14"/>
+          <path d="M0 -60 L0 26 M-28 -17 L28 -17 M-40 2 L40 2" stroke="#E8C872" stroke-width="2.5" opacity="0.16" fill="none"/>
+        `,
+        size: 190,
+        count: 3,
+      },
+      {
+        // 龙舟剪影（金）
+        svg: `
+          <path d="M-60 10 q10 -22 30 -24 q6 16 -6 28 q-16 6 -24 -4 Z" fill="#E8C872" opacity="0.14"/>
+          <path d="M-52 22 h120 q-6 16 -60 18 q-54 -2 -60 -18 Z" fill="#E8C872" opacity="0.14"/>
+          <path d="M0 22 l0 -30 M28 22 l0 -30 M56 22 l0 -30" stroke="#E8C872" stroke-width="2.5" opacity="0.12"/>
+        `,
+        size: 220,
+        count: 2,
+      },
+    ],
+  },
+  midautumn: {
+    name: '中秋',
+    items: [
+      {
+        // 满月（月白）
+        svg: `
+          <circle cx="0" cy="0" r="70" fill="#F5E8C8" opacity="0.14"/>
+          <circle cx="0" cy="0" r="70" fill="none" stroke="#E8C872" stroke-width="2.5" opacity="0.20"/>
+        `,
+        size: 180,
+        count: 2,
+      },
+      {
+        // 玉兔（月白）
+        svg: `
+          <path d="M-30 10 a30 30 0 0 0 0 38 l0 -38 Z" fill="#F5E8C8" opacity="0.16"/>
+          <path d="M-48 -4 q-14 -12 -8 -28 q-2 16 8 24 Z" fill="#F5E8C8" opacity="0.16"/>
+          <path d="M-10 -22 a14 14 0 0 1 0 18 l0 -18 Z" fill="#F5E8C8" opacity="0.16"/>
+        `,
+        size: 150,
+        count: 2,
+      },
+      {
+        // 祥云（金）
+        svg: `
+          <path d="M-40 10 q-12 8 -20 0 q-8 -10 4 -16 q-4 -14 12 -14 q10 -12 26 -4 q12 -8 22 2 q10 4 4 14 q10 8 0 18 q-6 6 -14 4 q-6 6 -16 2 q-8 4 -16 -2 q-6 2 -12 -4 Z" fill="#E8C872" opacity="0.15"/>
+        `,
+        size: 180,
+        count: 2,
+      },
+    ],
+  },
+  national: {
+    name: '国庆',
+    items: [
+      {
+        // 五角星：大红主体 + 金色描边（简化几何，不用精确国旗/国徽）
+        svg: `
+          <path d="M0 -70 l16 46 l48 0 l-38 30 l14 48 l-40 -32 l-40 32 l14 -48 l-38 -30 l48 0 Z" fill="#D23A2E" opacity="0.18"/>
+          <path d="M0 -70 l16 46 l48 0 l-38 30 l14 48 l-40 -32 l-40 32 l14 -48 l-38 -30 l48 0 Z" fill="none" stroke="#E8C872" stroke-width="3" opacity="0.28"/>
+        `,
+        size: 200,
+        count: 3,
+      },
+    ],
+  },
+}
+
+// 顶层节日装饰层：多素材分散布置，叠在内容之上、不挡交互，透明度低
+function FestivalLayer({ festival }) {
+  const f = FESTIVALS[festival]
+  if (!f) return null
+
+  const slots = [
+    { top: '16%', right: '-3%' },
+    { bottom: '10%', left: '-3%' },
+    { top: '40%', left: '-4%' },
+    { top: '34%', right: '-2%' },
+    { bottom: '30%', right: '-2%' },
+    { top: '8%', left: '-2%' },
+    { bottom: '22%', left: '-3%' },
+  ]
+
+  // 展开成素材实例列表，按 count 循环取位置
+  const instances = []
+  let slotIdx = 0
+  for (const item of f.items) {
+    for (let i = 0; i < item.count; i++) {
+      instances.push({ ...item, ...slots[slotIdx % slots.length] })
+      slotIdx++
+    }
+  }
+
+  const toUri = (item) =>
+    `data:image/svg+xml,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${item.size}" height="${item.size}" viewBox="-${item.size / 2} -${item.size / 2} ${item.size} ${item.size}">${item.svg}</svg>`
+    )}`
+
+  return (
+    <div className="absolute inset-0 z-30 pointer-events-none" aria-hidden>
+      {instances.map((it, i) => (
+        <img
+          key={i}
+          src={toUri(it)}
+          alt=""
+          draggable={false}
+          className="absolute"
+          style={{
+            width: it.size,
+            height: it.size,
+            ...(it.top !== undefined ? { top: it.top } : {}),
+            ...(it.bottom !== undefined ? { bottom: it.bottom } : {}),
+            ...(it.left !== undefined ? { left: it.left } : {}),
+            ...(it.right !== undefined ? { right: it.right } : {}),
+          }}
+        />
+      ))}
+    </div>
+  )
+}
 // 电视过扫描安全间距(px)：电视机会对边缘做 5%-8% 放大切边，
 // 外层留出安全 padding，保证核心文字(时间/日期/公告)在放大后仍在可视区
 const SAFE_PAD = 48
@@ -159,7 +353,7 @@ function RoomCard({ room, flashed }) {
 // 欢迎致辞横幅：优先显示，覆盖图片轮播区
 // 支持：文字（主标题/副标题/落款）自由填写 + 可选背景图（文字叠加在图上）
 // 布局：文字撑满整个横幅，四周只留少量边距；长文本自动降字号防溢出
-function WelcomeBanner({ welcome, hotelName }) {
+function WelcomeBanner({ welcome, hotelName, themeCss }) {
   const { title, subtitle, message, image_url } = welcome
   // 按字数自适应字号：越短越大，长文本自动降级避免换行溢出
   const titleFont = title.length > 10 ? 92 : title.length > 6 ? 108 : 126
@@ -167,11 +361,11 @@ function WelcomeBanner({ welcome, hotelName }) {
   const messageFont = message.length > 24 ? 36 : message.length > 14 ? 42 : 50
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* 背景：有图用图，无图用金色渐变 */}
+      {/* 背景：有图用图，无图用主题渐变 */}
       {image_url ? (
         <img src={image_url} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0b1220] via-[#0d1a30] to-[#1a2b4a]" />
+        <div className="absolute inset-0" style={{ background: themeCss }} />
       )}
       {/* 半透明遮罩：保证文字在图片上清晰可读 */}
       <div className="absolute inset-0 bg-black/40" />
@@ -333,11 +527,19 @@ export default function Display() {
       {/* 弹性撑满可用高度：舞台垂直居中，避免因 TV 放大而溢出底部 */}
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div
-          className="relative shrink-0 bg-gradient-to-b from-[#080f1c] via-[#0b1220] to-[#141f36] text-white overflow-hidden select-none"
-          style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})` }}
+          className="relative shrink-0 text-white overflow-hidden select-none"
+          style={{
+            width: STAGE_W,
+            height: STAGE_H,
+            transform: `scale(${scale})`,
+            background: (THEMES[data.theme] || THEMES.navy).css,
+          }}
         >
           {/* 顶部安全渐变遮罩：TV 过扫描裁切时保护顶部文字（时间/日期） */}
           <div className="absolute top-0 left-0 right-0 h-44 bg-gradient-to-b from-black/60 via-black/25 to-transparent pointer-events-none z-20" />
+
+          {/* 节日装饰层：顶层、低透明度、不挡交互 */}
+          <FestivalLayer festival={data.festival} />
 
           <div className="relative flex flex-col h-full">
             {/* 顶部信息栏（方案A：品牌 | 天气 | 时间） */}
@@ -347,8 +549,7 @@ export default function Display() {
                 height: 132,
                 paddingLeft: 40,
                 paddingRight: 50,
-                background:
-                  'linear-gradient(90deg, #020B18 0%, #04152B 40%, #061B34 70%, #020B18 100%)',
+                background: (THEMES[data.theme] || THEMES.navy).header,
                 borderBottom: '1px solid rgba(255,255,255,0.08)',
               }}
             >
@@ -426,9 +627,9 @@ export default function Display() {
             </header>
 
             {/* 横版图片轮播（16:9 条幅）—— 欢迎致辞优先 */}
-            <div className="relative mx-10 mt-5 h-[565px] shrink-0 rounded-2xl overflow-hidden bg-[#111a2e]">
+            <div className="relative mx-10 mt-5 h-[565px] shrink-0 rounded-2xl overflow-hidden bg-black/20">
               {welcome.enabled ? (
-                <WelcomeBanner welcome={welcome} hotelName={data.hotel_name} />
+                <WelcomeBanner welcome={welcome} hotelName={data.hotel_name} themeCss={(THEMES[data.theme] || THEMES.navy).css} />
               ) : images.length === 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">

@@ -51,6 +51,8 @@ def get_display(request: Request, db: Session = Depends(get_db)):
     payload = {
         "hotel_name": get_setting(db, "hotel_name"),
         "hotel_name_en": get_setting(db, "hotel_name_en"),
+        "theme": get_setting(db, "theme", "navy"),
+        "festival": get_setting(db, "festival", ""),
         "logo_url": f"/uploads/{logo}" if logo else "",
         "logo_size": int(get_setting(db, "logo_size", "96")),
         "qr_url": f"/uploads/{qr}" if qr else "",

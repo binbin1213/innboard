@@ -331,6 +331,8 @@ class SettingsBody(BaseModel):
     weather_api_key: str | None = None
     weather_city: str | None = None
     logo_size: int | None = None
+    theme: str | None = None
+    festival: str | None = None
 
 
 @router.get("/settings")
@@ -346,6 +348,8 @@ def get_settings(db: Session = Depends(get_db), _: str = Depends(require_auth)):
         "logo_url": f"/uploads/{logo}" if logo else "",
         "logo_size": int(get_setting(db, "logo_size", "96")),
         "qr_url": f"/uploads/{qr}" if qr else "",
+        "theme": get_setting(db, "theme", "navy"),
+        "festival": get_setting(db, "festival", ""),
     }
 
 
@@ -367,6 +371,16 @@ def update_settings(body: SettingsBody, db: Session = Depends(get_db), _: str = 
         set_setting(db, "weather_api_key", body.weather_api_key.strip())
     if body.weather_city is not None:
         set_setting(db, "weather_city", body.weather_city.strip())
+    if body.theme is not None:
+        theme = body.theme.strip()
+        if theme not in ("navy", "green", "wine", "black", "purple", "brown"):
+            raise HTTPException(status_code=400, detail="未知的背景主题")
+        set_setting(db, "theme", theme)
+    if body.festival is not None:
+        festival = body.festival.strip()
+        if festival not in ("", "spring", "dragon", "midautumn", "national"):
+            raise HTTPException(status_code=400, detail="未知的节日装饰")
+        set_setting(db, "festival", festival)
     db.commit()
     changed = ", ".join(body.model_fields_set) or "无"
     logger.info("更新系统设置，变更字段: %s", changed)
