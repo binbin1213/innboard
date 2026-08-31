@@ -21,6 +21,7 @@ export default function SettingsPage() {
     api.get('/api/settings', true).then((res) => {
       setForm({
         hotel_name: res.hotel_name,
+        hotel_name_en: res.hotel_name_en || '',
         carousel_interval: String(res.carousel_interval),
         weather_api_key: res.weather_api_key,
         weather_city: res.weather_city,
@@ -109,7 +110,14 @@ export default function SettingsPage() {
         <input
           value={form.hotel_name}
           onChange={(e) => setForm({ ...form, hotel_name: e.target.value })}
-          className="w-full border rounded-lg px-3 py-2 mb-4"
+          className="input mb-4"
+        />
+        <label className="block text-sm text-gray-600 mb-1">英文品牌名（选填，展示页酒店名下方显示）</label>
+        <input
+          value={form.hotel_name_en}
+          onChange={(e) => setForm({ ...form, hotel_name_en: e.target.value })}
+          placeholder="如：BIWY HOTEL"
+          className="input mb-4"
         />
         <label className="block text-sm text-gray-600 mb-1">轮播间隔（秒，3～60）</label>
         <input
@@ -123,7 +131,7 @@ export default function SettingsPage() {
         <button
           onClick={save}
           disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg px-6 py-2 font-medium"
+          className="btn-primary"
         >
           {saving ? '保存中…' : '保存设置'}
         </button>
@@ -141,7 +149,7 @@ export default function SettingsPage() {
           )}
           <button
             onClick={() => logoInputRef.current?.click()}
-            className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm font-medium"
+            className="btn-gold"
           >
             上传 LOGO
           </button>
@@ -171,7 +179,7 @@ export default function SettingsPage() {
           <button
             onClick={save}
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg px-6 py-2 font-medium"
+            className="btn-primary"
           >
             保存设置
           </button>
@@ -191,7 +199,7 @@ export default function SettingsPage() {
           )}
           <button
             onClick={() => qrInputRef.current?.click()}
-            className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm font-medium"
+            className="btn-gold"
           >
             上传二维码
           </button>
@@ -220,7 +228,7 @@ export default function SettingsPage() {
           <button
             onClick={save}
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg px-6 py-2 font-medium"
+            className="btn-primary"
           >
             保存设置
           </button>
@@ -253,7 +261,7 @@ export default function SettingsPage() {
         />
         <button
           onClick={changePassword}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2 font-medium"
+          className="btn-primary"
         >
           修改密码
         </button>

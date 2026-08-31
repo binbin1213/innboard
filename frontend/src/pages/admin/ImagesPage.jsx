@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, uploadFile } from '../../api'
+import ConfirmModal from '../../components/ConfirmModal'
 
 export default function ImagesPage() {
   const [images, setImages] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(null)
   const inputRef = useRef(null)
 
   const load = () => {
@@ -40,7 +42,6 @@ export default function ImagesPage() {
   }
 
   const remove = async (id) => {
-    if (!confirm('确定删除这张图片？')) return
     await api.del(`/api/images/${id}`, true)
     load()
   }
@@ -53,7 +54,7 @@ export default function ImagesPage() {
           <button
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg px-5 py-2 font-medium"
+            className="btn-gold"
           >
             {uploading ? '上传中…' : '上传图片'}
           </button>
@@ -69,7 +70,7 @@ export default function ImagesPage() {
             onChange={onUpload}
           />
         </div>
-        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+        {error && <div className="text-danger text-sm mb-4">{error}</div>}
         <div className="grid grid-cols-3 gap-4">
           {images?.map((img, i) => (
             <div key={img.id} className="border rounded-lg overflow-hidden bg-gray-50">
@@ -93,7 +94,7 @@ export default function ImagesPage() {
                   >
                     →
                   </button>
-                  <button onClick={() => remove(img.id)} className="px-2 py-1 text-red-500 text-sm hover:text-red-700">
+                  <button onClick={() => setPendingDelete(img)} className="px-2 py-1 text-danger text-sm hover:text-red-700">
                     删除
                   </button>
                 </div>
@@ -101,10 +102,24 @@ export default function ImagesPage() {
             </div>
           ))}
         </div>
-        {images && images.length === 0 && (
+        {images === null ? (
+          <div className="text-gray-400 text-center py-12">加载中…</div>
+        ) : images.length === 0 ? (
           <div className="text-gray-400 text-center py-12">暂无图片，请上传酒店宣传图片</div>
-        )}
+        ) : null}
       </div>
+
+      <ConfirmModal
+        open={!!pendingDelete}
+        title="删除图片"
+        message="确定删除这张宣传图片？删除后展示页将不再显示。"
+        confirmText="删除"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          await remove(pendingDelete.id)
+          setPendingDelete(null)
+        }}
+      />
     </div>
   )
 }

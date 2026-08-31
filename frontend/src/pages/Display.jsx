@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, memo, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import {
   BedIcon,
@@ -9,6 +9,7 @@ import {
   CoffeeIcon,
   StarIcon,
   HotelIcon,
+  WEATHER_ICONS,
 } from '../components/Icons'
 
 const STAGE_W = 1080
@@ -35,11 +36,71 @@ function announcementIcon(text) {
   return StarIcon
 }
 
+// 时钟独立组件：用 memo 隔离，offset 变化时才重渲染，避免父级每秒 setNow 连累整棵树
+const Clock = memo(function Clock({ offset }) {
+  const [now, setNow] = useState(() => new Date(Date.now() + offset))
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date(Date.now() + offset)), 1000)
+    return () => clearInterval(timer)
+  }, [offset])
+
+  const dateText = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`
+  const weekdayText = now.toLocaleDateString('zh-CN', { weekday: 'long' })
+  const timeParts = now.toLocaleTimeString('zh-CN', { hour12: false }).split(':')
+  const hhmm = `${timeParts[0]}:${timeParts[1]}`
+
+  return (
+    <div className="flex flex-col items-end shrink-0">
+      <div style={{ fontSize: 22, color: 'rgba(255,255,255,0.75)' }}>
+        {dateText} {weekdayText}
+      </div>
+      <div
+        className="font-bold leading-tight tabular-nums"
+        style={{
+          fontFamily: '"DIN", "DIN Alternate", "Roboto", sans-serif',
+          fontWeight: 700,
+          fontSize: 54,
+          color: '#FFFFFF',
+        }}
+      >
+        {hhmm}
+      </div>
+    </div>
+  )
+})
+
+// 轮播图：只挂载当前图 + 相邻两张做淡入淡出，其余卸载，减少常驻 DOM 与合成层
+function Carousel({ images, index }) {
+  return (
+    <>
+      {images.map((url, i) => {
+        // 只渲染当前、上一张、下一张，其余直接不挂载
+        const dist = Math.min(
+          Math.abs(i - index),
+          images.length - Math.abs(i - index)
+        )
+        if (dist > 1) return null
+        return (
+          <img
+            key={url}
+            src={url}
+            alt=""
+            draggable={false}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+              i === index ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        )
+      })}
+    </>
+  )
+}
+
 function RoomCard({ room, flashed }) {
   const Icon = roomIcon(room.name)
   const saving = room.rack_price - room.member_price
   return (
-    <div className="flex items-center justify-between rounded-xl border border-[#E8C872]/15 bg-[#E8C872]/[0.03] backdrop-blur-sm px-8 py-4">
+    <div className="flex flex-1 items-center justify-between rounded-xl border border-[#E8C872]/15 bg-[#E8C872]/[0.03] backdrop-blur-sm px-8 py-4">
       <div className="flex items-center gap-5 min-w-0">
         <Icon size={40} className="text-[#E8C872] shrink-0" />
         <div className="min-w-0">
@@ -191,7 +252,6 @@ function WelcomeBanner({ welcome, hotelName }) {
 export default function Display() {
   const [data, setData] = useState(null)
   const [offset, setOffset] = useState(0)
-  const [now, setNow] = useState(new Date())
   const [carouselIndex, setCarouselIndex] = useState(0)
   const [scale, setScale] = useState(1)
   const [flashed, setFlashed] = useState({})
@@ -238,11 +298,6 @@ export default function Display() {
     return () => clearInterval(timer)
   }, [])
 
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date(Date.now() + offset)), 1000)
-    return () => clearInterval(timer)
-  }, [offset])
-
   const images = data?.images || []
   const interval = Math.max(3, data?.carousel_interval || 5)
   const welcome = data?.welcome || {}
@@ -269,11 +324,6 @@ export default function Display() {
   if (!data) {
     return <div className="h-full w-full bg-black" />
   }
-
-  const dateText = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`
-  const weekdayText = now.toLocaleDateString('zh-CN', { weekday: 'long' })
-  const timeParts = now.toLocaleTimeString('zh-CN', { hour12: false }).split(':')
-  const hhmm = `${timeParts[0]}:${timeParts[1]}`
 
   return (
     <div
@@ -309,10 +359,10 @@ export default function Display() {
                     src={data.logo_url}
                     alt="logo"
                     className="object-contain shrink-0"
-                    style={{ height: 68, opacity: 0.9 }}
+                    style={{ height: 80, opacity: 0.9 }}
                   />
                 ) : (
-                  <HotelIcon size={68} className="text-[#D8B56A] shrink-0" />
+                  <HotelIcon size={80} className="text-[#D8B56A] shrink-0" />
                 )}
                 <div className="flex flex-col items-center justify-center min-w-0">
                   <h1
@@ -321,7 +371,7 @@ export default function Display() {
                       fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
                       fontWeight: 700,
                       fontSize: 48,
-                      color: '#D8B56A',
+                      color: '#D8B06A',
                       letterSpacing: 2,
                     }}
                   >
@@ -331,11 +381,11 @@ export default function Display() {
                     className="leading-none mt-3"
                     style={{
                       fontSize: 15,
-                      color: 'rgba(216,181,106,0.9)',
+                      color: 'rgba(216,176,106,0.9)',
                       letterSpacing: 3,
                     }}
                   >
-                    BIWY HOTEL
+                    {data.hotel_name_en || ''}
                   </div>
                 </div>
               </div>
@@ -345,44 +395,34 @@ export default function Display() {
                 style={{
                   width: 1,
                   height: 56,
-                  background: 'rgba(255,255,255,0.25)',
+                  background: 'rgba(255,255,255,0.10)',
                   marginLeft: 36,
                   marginRight: 36,
                 }}
               />
 
-              {/* 天气：在剩余空间居中 */}
-              <div
-                className="flex-1"
-                style={{
-                  fontSize: 26,
-                  color: 'rgba(255,255,255,0.9)',
-                  letterSpacing: 1,
-                  textAlign: 'center',
-                }}
-              >
-                {data.weather_city && data.weather
-                  ? `${data.weather_city} · ${data.weather.text} ${data.weather.temp}℃`
-                  : data.weather_city || ''}
+              {/* 天气：城市一行，下面天气图标 + 温度一行 */}
+              <div className="flex-1 flex flex-col items-center justify-center leading-none">
+                {data.weather_city && (
+                  <div style={{ fontSize: 28, color: 'rgba(255,255,255,0.9)', letterSpacing: 2 }}>
+                    {data.weather_city}
+                  </div>
+                )}
+                {data.weather && (
+                  <div className="flex items-center gap-3" style={{ marginTop: 8 }}>
+                    {(() => {
+                      const WIcon = WEATHER_ICONS[data.weather.cat] || WEATHER_ICONS.cloudy
+                      return <WIcon size={40} />
+                    })()}
+                    <span style={{ fontSize: 26, color: 'rgba(255,255,255,0.92)' }}>
+                      {data.weather.text} {data.weather.temp}℃
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* 时间区：日期 + 时间（无秒） */}
-              <div className="flex flex-col items-end shrink-0">
-                <div style={{ fontSize: 24, color: 'rgba(255,255,255,0.75)' }}>
-                  {dateText} {weekdayText}
-                </div>
-                <div
-                  className="font-bold leading-tight tabular-nums"
-                  style={{
-                    fontFamily: '"DIN", "DIN Alternate", "Roboto", sans-serif',
-                    fontWeight: 700,
-                    fontSize: 52,
-                    color: '#FFFFFF',
-                  }}
-                >
-                  {hhmm}
-                </div>
-              </div>
+              {/* 时间区：日期 + 时间（无秒），独立 Clock 组件隔离每秒重渲染 */}
+              <Clock offset={offset} />
             </header>
 
             {/* 横版图片轮播（16:9 条幅）—— 欢迎致辞优先 */}
@@ -397,39 +437,27 @@ export default function Display() {
                   </div>
                 </div>
               ) : (
-                images.map((url, i) => (
-                  <img
-                    key={url}
-                    src={url}
-                    alt=""
-                    draggable={false}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-                      i === carouselIndex ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  />
-                ))
+                <Carousel images={images} index={carouselIndex} />
               )}
               {/* 顶部渐变：让大图与头部平滑过渡，裁切处不显生硬 */}
               <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-10" />
             </div>
 
-            {/* 房价牌区域（防烧屏位移） */}
+            {/* 房价牌区域（防烧屏位移）：标题固定，房型列表 flex-1 自适应填充剩余空间 */}
             <main className="burnin-shift flex-1 px-10 pt-4 flex flex-col min-h-0">
-              <div className="flex-1 min-h-0 flex flex-col justify-center">
-                <div className="shrink-0 pb-3 relative flex flex-col items-center">
-                  <div className="flex items-center gap-5">
-                    <div className="h-[2px] w-52 bg-gradient-to-l from-[#D4AF37]/60 to-transparent" />
-                    <div className="w-2 h-2 rotate-45 bg-[#D4AF37]/70 shrink-0" />
-                    <h2 className="text-[52px] font-bold text-[#D4AF37] leading-none tracking-[0.3em] pl-[0.3em]">
-                      今日房价
-                    </h2>
-                    <div className="w-2 h-2 rotate-45 bg-[#D4AF37]/70 shrink-0" />
-                    <div className="h-[2px] w-52 bg-gradient-to-r from-[#D4AF37]/60 to-transparent" />
-                  </div>
+              <div className="shrink-0 pb-8 relative flex flex-col items-center">
+                <div className="flex items-center gap-5">
+                  <div className="h-[2px] w-52 bg-gradient-to-l from-[#D4AF37]/60 to-transparent" />
+                  <div className="w-2 h-2 rotate-45 bg-[#D4AF37]/70 shrink-0" />
+                  <h2 className="text-[52px] font-bold text-[#D4AF37] leading-none tracking-[0.3em] pl-[0.3em]">
+                    今日房价
+                  </h2>
+                  <div className="w-2 h-2 rotate-45 bg-[#D4AF37]/70 shrink-0" />
+                  <div className="h-[2px] w-52 bg-gradient-to-r from-[#D4AF37]/60 to-transparent" />
                 </div>
               </div>
 
-              <div className="shrink-0 flex flex-col gap-6 pb-2">
+              <div className="flex-1 min-h-0 flex flex-col gap-5 pb-2">
                 {data.rooms.map((room) => (
                   <RoomCard key={room.name} room={room} flashed={!!flashed[room.name]} />
                 ))}

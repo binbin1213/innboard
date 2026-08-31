@@ -26,23 +26,33 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <aside className="w-52 bg-slate-900 text-white flex flex-col shrink-0">
-        <div className="p-5 text-lg font-bold border-b border-slate-700">房价牌管理</div>
+    <div className="flex h-screen bg-gray-50">
+      <aside className="w-52 bg-navy-800 text-white flex flex-col shrink-0">
+        <div className="flex items-center gap-2 px-5 py-5 text-lg font-bold border-b border-white/10">
+          <span className="h-2 w-2 rounded-full bg-brand-400 shrink-0" />
+          房价牌管理
+        </div>
         <nav className="flex-1 py-2">
           {tabs.map((t) => (
             <NavLink
               key={t.to}
               to={t.to}
               className={({ isActive }) =>
-                `block px-5 py-3 ${isActive ? 'bg-slate-700 font-medium' : 'hover:bg-slate-800'}`
+                `block px-5 py-3 text-sm transition-colors ${
+                  isActive
+                    ? 'bg-navy-600 text-brand-300 font-medium border-l-2 border-brand-400'
+                    : 'text-gray-300 hover:bg-navy-700 hover:text-white'
+                }`
               }
             >
               {t.label}
             </NavLink>
           ))}
         </nav>
-        <button onClick={logout} className="p-5 text-left hover:bg-slate-800 border-t border-slate-700">
+        <button
+          onClick={logout}
+          className="p-5 text-left text-sm text-gray-400 hover:bg-navy-700 hover:text-white border-t border-white/10 transition-colors"
+        >
           退出登录
         </button>
       </aside>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
+import ConfirmModal from '../../components/ConfirmModal'
 
-function RoomRow({ room, index, total, onSaved, onMoved, onDeleted }) {
+function RoomRow({ room, index, total, onSaved, onMoved, onRequestDelete }) {
   const [name, setName] = useState(room.name)
   const [description, setDescription] = useState(room.description || '')
   const [rackPrice, setRackPrice] = useState(String(room.rack_price))
@@ -106,18 +107,16 @@ function RoomRow({ room, index, total, onSaved, onMoved, onDeleted }) {
         <button
           onClick={save}
           disabled={saving}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded px-3 py-1.5 text-sm"
+          className="w-full bg-navy-700 hover:bg-navy-600 disabled:opacity-50 text-white rounded px-3 py-1.5 text-sm transition-colors"
         >
           {saving ? '保存中' : '保存'}
         </button>
-        {error && <div className="text-red-500 text-xs mt-1">{error}</div>}
+        {error && <div className="text-danger text-xs mt-1">{error}</div>}
       </td>
       <td className="py-2 w-16">
         <button
-          onClick={() => {
-            if (confirm(`确定删除「${room.name}」？`)) onDeleted(room.id)
-          }}
-          className="text-red-500 hover:text-red-700 text-sm"
+          onClick={() => onRequestDelete(room)}
+          className="text-danger hover:text-red-700 text-sm"
         >
           删除
         </button>
@@ -127,7 +126,15 @@ function RoomRow({ room, index, total, onSaved, onMoved, onDeleted }) {
 }
 
 function priceChange(oldPrice, newPrice) {
-  return oldPrice === newPrice ? <span className="text-gray-300">—</span> : `${oldPrice} → ${newPrice}`
+  if (oldPrice === newPrice) return <span className="text-gray-300">—</span>
+  // A 股习惯：涨红跌绿
+  const color = newPrice > oldPrice ? 'text-red-600' : 'text-green-600'
+  const arrow = newPrice > oldPrice ? '↑' : '↓'
+  return (
+    <span className={color}>
+      {oldPrice} → {newPrice} {arrow}
+    </span>
+  )
 }
 
 export default function RoomsPage() {
@@ -138,6 +145,7 @@ export default function RoomsPage() {
   const [newMember, setNewMember] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [error, setError] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   const load = () => {
     api.get('/api/rooms', true).then(setRooms).catch((e) => setError(e.message))
@@ -207,11 +215,11 @@ export default function RoomsPage() {
             placeholder="会员价"
             className="w-28 border rounded-lg px-3 py-2"
           />
-          <button onClick={add} className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 font-medium">
+          <button onClick={add} className="btn-gold">
             添加房型
           </button>
         </div>
-        {error && <div className="text-red-500 text-sm mb-3">{error}</div>}
+        {error && <div className="text-danger text-sm mb-3">{error}</div>}
         <div className="overflow-x-auto">
         <table className="w-full min-w-[900px]">
           <thead>
@@ -236,15 +244,17 @@ export default function RoomsPage() {
                 total={rooms.length}
                 onSaved={load}
                 onMoved={move}
-                onDeleted={remove}
+                onRequestDelete={setPendingDelete}
               />
             ))}
           </tbody>
         </table>
         </div>
-        {rooms && rooms.length === 0 && (
+        {rooms === null ? (
+          <div className="text-gray-400 text-center py-8">加载中…</div>
+        ) : rooms.length === 0 ? (
           <div className="text-gray-400 text-center py-8">暂无房型，请添加</div>
-        )}
+        ) : null}
       </div>
 
       <h3 className="text-lg font-bold mb-3">最近改价记录</h3>
@@ -263,10 +273,10 @@ export default function RoomsPage() {
               <tr key={log.id} className="border-b border-gray-100">
                 <td className="py-2 pr-4">{log.created_at}</td>
                 <td className="py-2 pr-4">{log.room_name}</td>
-                <td className="py-2 pr-4 text-gray-600">
+                <td className="py-2 pr-4">
                   {priceChange(log.old_rack_price, log.new_rack_price)}
                 </td>
-                <td className="py-2 text-red-600">
+                <td className="py-2">
                   {priceChange(log.old_member_price, log.new_member_price)}
                 </td>
               </tr>
@@ -275,6 +285,18 @@ export default function RoomsPage() {
         </table>
         {logs.length === 0 && <div className="text-gray-400 text-center py-4">暂无记录</div>}
       </div>
+
+      <ConfirmModal
+        open={!!pendingDelete}
+        title="删除房型"
+        message={`确定删除「${pendingDelete?.name}」？该房型的价格历史记录将一并删除。`}
+        confirmText="删除"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          await remove(pendingDelete.id)
+          setPendingDelete(null)
+        }}
+      />
     </div>
   )
 }

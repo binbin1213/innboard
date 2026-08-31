@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
+import ConfirmModal from '../../components/ConfirmModal'
 
-function AnnouncementRow({ item, index, total, onSaved, onMoved, onDeleted }) {
+function AnnouncementRow({ item, index, total, onSaved, onMoved, onRequestDelete }) {
   const [text, setText] = useState(item.text)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -46,19 +47,17 @@ function AnnouncementRow({ item, index, total, onSaved, onMoved, onDeleted }) {
       <button
         onClick={save}
         disabled={saving}
-        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm shrink-0"
+        className="bg-navy-700 hover:bg-navy-600 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm shrink-0 transition-colors"
       >
         {saving ? '保存中' : '保存'}
       </button>
       <button
-        onClick={() => {
-          if (confirm('确定删除这条公告？')) onDeleted(item.id)
-        }}
-        className="text-red-500 hover:text-red-700 text-sm shrink-0"
+        onClick={() => onRequestDelete(item)}
+        className="text-danger hover:text-red-700 text-sm shrink-0"
       >
         删除
       </button>
-      {error && <div className="text-red-500 text-xs shrink-0">{error}</div>}
+      {error && <div className="text-danger text-xs shrink-0">{error}</div>}
     </div>
   )
 }
@@ -67,6 +66,7 @@ export default function AnnouncementsPage() {
   const [items, setItems] = useState(null)
   const [newText, setNewText] = useState('')
   const [error, setError] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   const load = () => {
     api.get('/api/announcements', true).then(setItems).catch((e) => setError(e.message))
@@ -106,11 +106,11 @@ export default function AnnouncementsPage() {
             placeholder="新公告内容，如：连住两晚95折"
             className="flex-1 border rounded-lg px-3 py-2"
           />
-          <button onClick={add} className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 font-medium">
+          <button onClick={add} className="btn-gold">
             添加公告
           </button>
         </div>
-        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+        {error && <div className="text-danger text-sm mb-4">{error}</div>}
         <div className="flex flex-col gap-3">
           {items?.map((item, i) => (
             <AnnouncementRow
@@ -120,14 +120,28 @@ export default function AnnouncementsPage() {
               total={items.length}
               onSaved={load}
               onMoved={move}
-              onDeleted={remove}
+              onRequestDelete={setPendingDelete}
             />
           ))}
         </div>
-        {items && items.length === 0 && (
+        {items === null ? (
+          <div className="text-gray-400 text-center py-8">加载中…</div>
+        ) : items.length === 0 ? (
           <div className="text-gray-400 text-center py-8">暂无公告</div>
-        )}
+        ) : null}
       </div>
+
+      <ConfirmModal
+        open={!!pendingDelete}
+        title="删除公告"
+        message={`确定删除公告「${pendingDelete?.text}」？`}
+        confirmText="删除"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          await remove(pendingDelete.id)
+          setPendingDelete(null)
+        }}
+      />
     </div>
   )
 }

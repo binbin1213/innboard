@@ -14,6 +14,40 @@ body {
   font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
 }
 
+/* ===== 管理后台组件基类（design token 驱动的统一视觉） ===== */
+
+@layer components {
+  /* 按钮：主操作 = 品牌深蓝，强调 = 金，危险 = 红，成功 = 绿，次操作 = 描边 */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-navy-700 text-white hover:bg-navy-600 focus:ring-navy-400;
+  }
+  .btn-gold {
+    @apply btn bg-brand-400 text-navy-900 hover:bg-brand-300 focus:ring-brand-400;
+  }
+  .btn-success {
+    @apply btn bg-success text-white hover:opacity-90 focus:ring-success;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90 focus:ring-danger;
+  }
+  .btn-ghost {
+    @apply btn border border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-gray-300;
+  }
+
+  /* 输入框统一 focus 态 */
+  .input {
+    @apply w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-navy-300 focus:border-navy-400;
+  }
+
+  /* 卡片 */
+  .card {
+    @apply bg-white rounded-xl shadow-card;
+  }
+}
+
 /* 防烧屏：静态区域缓慢微小位移 */
 @keyframes burnin-shift {
   0%, 40% { transform: translate(0, 0); }

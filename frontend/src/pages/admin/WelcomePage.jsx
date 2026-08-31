@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, uploadFile } from '../../api'
+import ConfirmModal from '../../components/ConfirmModal'
 
 export default function WelcomePage() {
   const [form, setForm] = useState(null)
+  const [hotelName, setHotelName] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const inputRef = useRef(null)
 
   const load = () => {
@@ -22,6 +25,7 @@ export default function WelcomePage() {
           end_time: data.end_time,
         })
         setImageUrl(data.image_url)
+        setHotelName(data.hotel_name || '')
       })
       .catch((e) => setError(e.message))
   }
@@ -66,7 +70,6 @@ export default function WelcomePage() {
   }
 
   const removeImage = async () => {
-    if (!confirm('确定删除当前欢迎背景图？')) return
     setError('')
     try {
       await api.del('/api/welcome/image', true)
@@ -157,14 +160,14 @@ export default function WelcomePage() {
             <button
               onClick={() => inputRef.current?.click()}
               disabled={uploading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium"
+              className="btn-gold"
             >
               {uploading ? '上传中…' : '上传背景图'}
             </button>
             {imageUrl && (
               <button
-                onClick={removeImage}
-                className="text-red-500 text-sm hover:text-red-700"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-danger text-sm hover:text-red-700"
               >
                 删除背景图
               </button>
@@ -181,13 +184,13 @@ export default function WelcomePage() {
           )}
         </div>
 
-        {error && <div className="text-red-500 text-sm mb-3">{error}</div>}
+        {error && <div className="text-danger text-sm mb-3">{error}</div>}
 
         <div className="flex items-center gap-3">
           <button
             onClick={save}
             disabled={saving}
-            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg px-6 py-2 font-medium"
+            className="btn-primary"
           >
             {saving ? '保存中…' : '保存'}
           </button>
@@ -218,7 +221,7 @@ export default function WelcomePage() {
                 {form.message && <div className="mt-2 text-white/90 text-sm">{form.message}</div>}
               </div>
               <div className="absolute bottom-2 right-3 text-[#E8C872]/85 text-xs tracking-[0.3em]">
-                柏维酒店
+                {hotelName || '酒店名称'}
               </div>
             </>
           ) : (
@@ -228,6 +231,18 @@ export default function WelcomePage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="删除背景图"
+        message="确定删除当前欢迎背景图？"
+        confirmText="删除"
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={async () => {
+          await removeImage()
+          setShowDeleteConfirm(false)
+        }}
+      />
     </div>
   )
 }
