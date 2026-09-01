@@ -1,8 +1,10 @@
+import io
 import logging
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from PIL import Image as PILImage, ImageOps
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -19,6 +21,41 @@ router = APIRouter(prefix="/api", tags=["admin"])
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 SIZE_LIMIT = 20 * 1024 * 1024
+# 图片优化：大屏轮播为 16:9 横条，长边 1920px 足够；超过该尺寸或 500KB 即压缩
+OPT_MAX_EDGE = 1920
+OPT_MAX_BYTES = 500 * 1024
+
+
+def _optimize_image(data: bytes, real_ext: str) -> bytes:
+    """压缩上传图片（保持原格式）：gif 动画跳过；超过尺寸/体积才处理。
+
+    失败时原样返回，不影响上传流程。
+    """
+    if real_ext == ".gif":
+        return data
+    try:
+        im = PILImage.open(io.BytesIO(data))
+        im = ImageOps.exif_transpose(im)  # 修正手机照片方向
+        w, h = im.size
+        need_resize = max(w, h) > OPT_MAX_EDGE
+        need_compress = len(data) > OPT_MAX_BYTES
+        if not (need_resize or need_compress):
+            return data
+        if need_resize:
+            ratio = OPT_MAX_EDGE / max(w, h)
+            im = im.resize((int(w * ratio), int(h * ratio)), PILImage.LANCZOS)
+        buf = io.BytesIO()
+        if real_ext == ".png":
+            im.save(buf, "PNG", optimize=True)  # 保留透明度
+        elif real_ext == ".webp":
+            im.save(buf, "WEBP", quality=82, method=6)
+        else:
+            im.save(buf, "JPEG", quality=82, optimize=True, progressive=True)
+        out = buf.getvalue()
+        return out if len(out) < len(data) else data
+    except Exception:
+        logger.warning("图片优化失败，保留原文件", exc_info=True)
+        return data
 
 
 def next_sort_order(db: Session, model) -> int:
@@ -77,7 +114,7 @@ async def save_upload(file: UploadFile) -> str:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     filename = f"{uuid.uuid4().hex}{real_ext}"
-    (UPLOAD_DIR / filename).write_bytes(content)
+    (UPLOAD_DIR / filename).write_bytes(_optimize_image(content, real_ext))
     return filename
 
 
