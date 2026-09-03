@@ -9,7 +9,7 @@ APP_NAME="innboard-player"
 
 # 1) 在 Electron 缓存目录里查找已下载的 win32 包
 ZIP=""
-for d in "$HOME/Library/Caches/electron"/*/; do
+for d in "$HOME/Library/Caches/electron"/*/ "$HOME/.cache/electron"/*/; do
   if [ -f "${d}electron-v${ELECTRON_VERSION}-win32-x64.zip" ]; then
     ZIP="${d}electron-v${ELECTRON_VERSION}-win32-x64.zip"
     break
@@ -28,6 +28,12 @@ unzip -q "$ZIP" -d "$WORK/app"
 
 mkdir -p "$WORK/app/resources/app"
 cp main.js control.html emergency.html package.json "$WORK/app/resources/app/"
+
+# 版本信息（控制面板副标题显示，便于确认电视端安装的是哪一版）
+VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo '0.0.0')
+BUILD_TIME=$(date '+%Y-%m-%d %H:%M')
+printf '{"version":"%s","buildTime":"%s"}\n' "$VERSION" "$BUILD_TIME" > "$WORK/app/resources/app/version.json"
+
 rm -f "$WORK/app/resources/default_app.asar"
 mv "$WORK/app/electron.exe" "$WORK/app/${APP_NAME}.exe"
 
@@ -42,3 +48,4 @@ rm -f "$ZIPOUT"
 
 echo "完成：$DEST"
 echo "压缩包：$ZIPOUT"
+echo "版本：v${VERSION} (${BUILD_TIME})"

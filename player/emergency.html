@@ -27,13 +27,28 @@
       letter-spacing: 8px;
       color: rgba(216, 181, 106, 0.9);
     }
-    .time {
+    .time-row {
       margin-top: 48px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 14px;
+    }
+    .time {
       font-family: "DIN", "DIN Alternate", "Roboto", sans-serif;
       font-size: 150px;
       font-weight: 700;
       line-height: 1;
       letter-spacing: 2px;
+    }
+    /* 秒针：小号弱化，便于确认时间在走（分钟卡顿时肉眼可辨） */
+    .sec {
+      font-family: "DIN", "DIN Alternate", "Roboto", sans-serif;
+      font-size: 46px;
+      font-weight: 600;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.5);
+      padding-bottom: 6px;
     }
     .date {
       margin-top: 18px;
@@ -47,7 +62,10 @@
   <div class="box">
     <div class="brand" id="brand">柏维酒店</div>
     <div class="sub">BIWY HOTEL</div>
-    <div class="time" id="time">--:--</div>
+    <div class="time-row">
+      <div class="time" id="time">--:--</div>
+      <div class="sec" id="sec">--</div>
+    </div>
     <div class="date" id="date"></div>
   </div>
   <script>
@@ -63,6 +81,8 @@
       const now = new Date();
       document.getElementById('time').textContent =
         pad(now.getHours()) + ':' + pad(now.getMinutes());
+      document.getElementById('sec').textContent =
+        pad(now.getSeconds());
       document.getElementById('date').textContent =
         now.getFullYear() + '/' + pad(now.getMonth() + 1) + '/' + pad(now.getDate()) +
         ' ' + WEEK[now.getDay()];

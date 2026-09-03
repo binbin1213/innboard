@@ -40,10 +40,14 @@
       background: linear-gradient(var(--gold), rgba(216, 181, 106, 0.25));
     }
     .sub {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       color: var(--muted);
       font-size: 12px;
       margin: 5px 0 16px 14px;
     }
+    .ver { color: var(--gold-deep); font-size: 11px; letter-spacing: 0.5px; }
     .card {
       background: rgba(255, 255, 255, 0.035);
       border: 1px solid var(--line);
@@ -80,12 +84,14 @@
       transition: filter 0.15s ease, transform 0.05s ease;
     }
     button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.55; cursor: default; transform: none !important; }
     .btn-primary {
       background: linear-gradient(160deg, #E8CA79, #C49B4A);
       color: #1C1406;
       font-weight: 700;
     }
     .btn-primary:hover { filter: brightness(1.07); }
+    .btn-primary:disabled { filter: none; }
     .btn-ghost {
       background: rgba(255, 255, 255, 0.06);
       border-color: var(--line);
@@ -115,6 +121,73 @@
       margin-top: 8px;
       line-height: 1.6;
     }
+
+    /* ---- 状态卡 ---- */
+    .statbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      min-height: 22px;
+    }
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
+    }
+    .dot.gray  { background: #6B7280; }
+    .dot.green { background: #34D399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.7); }
+    .dot.gold  { background: var(--gold); box-shadow: 0 0 8px rgba(216, 181, 106, 0.7); }
+    .dot.red   { background: #F87171; box-shadow: 0 0 8px rgba(248, 113, 113, 0.7); }
+    .mode { font-weight: 600; white-space: nowrap; }
+    .mode.green { color: #6EE7B7; }
+    .mode.gold  { color: var(--gold); }
+    .mode.red   { color: #FCA5A5; }
+    .url {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--muted);
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: right;
+    }
+    .statline {
+      font-size: 11.5px;
+      color: var(--text);
+      opacity: 0.75;
+      margin-top: 8px;
+      line-height: 1.5;
+      word-break: break-all;
+    }
+    .statline.muted { color: var(--muted); }
+    .flash {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--gold);
+      min-height: 0;
+      line-height: 1.5;
+      word-break: break-all;
+      transition: opacity 0.3s;
+    }
+    .flash.err { color: #FCA5A5; }
+    .events {
+      margin-top: 8px;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+      max-height: 104px;
+      overflow-y: auto;
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .events::-webkit-scrollbar { width: 4px; }
+    .events::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+    .ev { display: flex; gap: 8px; word-break: break-all; }
+    .evt { color: var(--gold-deep); flex-shrink: 0; font-variant-numeric: tabular-nums; }
     .status {
       font-size: 12px;
       color: var(--muted);
@@ -129,7 +202,10 @@
 </head>
 <body>
   <div class="title">房价牌播放器</div>
-  <div class="sub">酒店智能房价牌 · 电视竖屏展示端</div>
+  <div class="sub">
+    <span>酒店智能房价牌 · 电视竖屏展示端</span>
+    <span class="ver" id="ver"></span>
+  </div>
 
   <div class="card">
     <label class="label">服务器地址</label>
@@ -165,7 +241,7 @@
       <button class="btn-ghost btn-half" id="cache">手动缓存</button>
       <button class="btn-ghost btn-half" id="local">本地模式</button>
     </div>
-    <div class="hint">连网时先「手动缓存」存一份完整页面；断网时「本地模式」在电视上显示它。</div>
+    <div class="hint">连网时「手动缓存」立即备份当前页面；平时在线会自动每 12 小时后台更新一次快照，断网时「本地模式」显示它。</div>
   </div>
 
   <div class="card">
@@ -174,7 +250,15 @@
 
   <div class="card">
     <label class="label">状态</label>
-    <div class="status" id="status">正在检测屏幕…</div>
+    <div class="statbar">
+      <span class="dot gray" id="dot"></span>
+      <span class="mode" id="modeText">检测中…</span>
+      <span class="url" id="urlText"></span>
+    </div>
+    <div class="statline" id="screenInfo">正在检测屏幕…</div>
+    <div class="statline muted" id="snapInfo"></div>
+    <div class="flash" id="flash"></div>
+    <div class="events" id="events"></div>
   </div>
 
   <script>
@@ -188,10 +272,73 @@
     const $local = document.getElementById('local');
     const $cache = document.getElementById('cache');
     const $admin = document.getElementById('admin');
-    const $status = document.getElementById('status');
+    const $ver = document.getElementById('ver');
+    const $dot = document.getElementById('dot');
+    const $modeText = document.getElementById('modeText');
+    const $urlText = document.getElementById('urlText');
+    const $screenInfo = document.getElementById('screenInfo');
+    const $snapInfo = document.getElementById('snapInfo');
+    const $flash = document.getElementById('flash');
+    const $events = document.getElementById('events');
 
-    function setStatus(html) {
-      $status.innerHTML = html;
+    const MODE_META = {
+      idle:      { text: '未在播放', cls: 'gray' },
+      starting:  { text: '正在连接…', cls: 'gold' },
+      online:    { text: '线上播放中', cls: 'green' },
+      local:     { text: '本地模式', cls: 'gold' },
+      emergency: { text: '断网应急', cls: 'red' },
+    };
+
+    let flashTimer = null;
+    function setFlash(html, isErr) {
+      $flash.innerHTML = html;
+      $flash.className = 'flash' + (isErr ? ' err' : '');
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => { $flash.textContent = ''; }, 4000);
+    }
+
+    // 短显示 URL：去掉协议前缀，截断超长
+    function shortUrl(u) {
+      if (!u) return '';
+      return String(u).replace(/^https?:\/\//, '').replace(/^file:\/\//, '');
+    }
+
+    function renderState(s) {
+      const meta = MODE_META[s.mode] || MODE_META.idle;
+      $dot.className = 'dot ' + meta.cls;
+      $modeText.textContent = meta.text;
+      $modeText.className = 'mode ' + (meta.cls === 'gray' ? '' : meta.cls);
+      $urlText.textContent = shortUrl(s.url || '');
+      $urlText.title = s.url || '';
+
+      if (s.snapshotTime) {
+        $snapInfo.textContent = '本地快照：' + s.snapshotTime +
+          (s.manualLocal ? '（手动本地模式中）' : '（每 12h 自动更新）');
+      } else {
+        $snapInfo.textContent = '本地快照：暂无（断网时将显示应急时钟）';
+      }
+
+      const evs = s.events || [];
+      $events.innerHTML = '';
+      for (let i = 0; i < Math.min(6, evs.length); i++) {
+        const div = document.createElement('div');
+        div.className = 'ev';
+        const t = document.createElement('span');
+        t.className = 'evt';
+        t.textContent = evs[i].t;
+        const m = document.createElement('span');
+        m.textContent = evs[i].msg;
+        div.appendChild(t);
+        div.appendChild(m);
+        $events.appendChild(div);
+      }
+    }
+
+    async function pollState() {
+      try {
+        const s = await ipcRenderer.invoke('get-state');
+        renderState(s);
+      } catch (e) { /* 忽略瞬时错误 */ }
     }
 
     async function refreshDisplays() {
@@ -199,63 +346,93 @@
         const displays = await ipcRenderer.invoke('get-displays');
         const primary = displays.find((d) => d.primary);
         const others = displays.filter((d) => !d.primary);
-        let html = `共检测到 <b>${displays.length}</b> 块屏幕<br>`;
+        let html = `共检测到 <b>${displays.length}</b> 块屏幕`;
         if (others.length > 0) {
           const tv = others[0];
-          html += `将在第 2 块屏（<b>${tv.width}×${tv.height}</b>）全屏播放`;
+          html += ` · 将在第 2 块屏（<b>${tv.width}×${tv.height}</b>）全屏播放`;
         } else {
-          html += '只检测到一块屏幕，将直接全屏播放（请确认 HDMI 电视已连接并设为竖屏）';
+          html += ' · 只检测到一块屏幕，将直接全屏播放（请确认 HDMI 电视已连接并设为竖屏）';
         }
-        setStatus(html);
+        $screenInfo.innerHTML = html;
       } catch (e) {
-        setStatus('无法读取屏幕信息');
+        $screenInfo.textContent = '无法读取屏幕信息';
       }
     }
 
     async function init() {
-      const cfg = await ipcRenderer.invoke('get-config');
-      $url.value = cfg.serverUrl || '';
+      try {
+        const cfg = await ipcRenderer.invoke('get-config');
+        $url.value = cfg.serverUrl || '';
+      } catch (e) { /* 忽略 */ }
+      try {
+        const v = await ipcRenderer.invoke('get-version');
+        $ver.textContent = 'v' + (v.version || '') + (v.buildTime ? ' · ' + v.buildTime : '');
+      } catch (e) { /* 忽略 */ }
       await refreshDisplays();
+      await pollState();
+      setInterval(pollState, 2000);
     }
 
     $save.addEventListener('click', async () => {
       const r = await ipcRenderer.invoke('save-config', { serverUrl: $url.value.trim() });
-      setStatus(r.ok ? '地址已保存' : '保存失败');
+      setFlash(r.ok ? '地址已保存 ✓' : '保存失败', !r.ok);
     });
 
     $play.addEventListener('click', async () => {
-      const r = await ipcRenderer.invoke('play');
-      if (r && r.ok) {
-        setStatus(`正在电视全屏播放<br>地址：<b>${r.url}</b>`);
-      } else {
-        setStatus(`播放失败：${(r && r.msg) || '未知错误'}`);
+      try {
+        const r = await ipcRenderer.invoke('play');
+        if (r && r.ok) {
+          setFlash('正在电视全屏播放…');
+        } else {
+          setFlash(`播放失败：${(r && r.msg) || '未知错误'}`, true);
+        }
+      } catch (e) {
+        setFlash('播放失败：' + e.message, true);
       }
     });
 
     $stop.addEventListener('click', async () => {
       await ipcRenderer.invoke('stop');
-      setStatus('已停止播放');
+      setFlash('已停止播放');
     });
 
     $refresh.addEventListener('click', async () => {
-      const r = await ipcRenderer.invoke('refresh');
-      setStatus(r.ok ? '已刷新电视画面' : `刷新失败：${(r && r.msg) || '未知错误'}`);
+      try {
+        const r = await ipcRenderer.invoke('refresh');
+        setFlash(r.ok ? '已刷新电视画面' : `刷新失败：${(r && r.msg) || '未知错误'}`, !r.ok);
+      } catch (e) {
+        setFlash('刷新失败：' + e.message, true);
+      }
     });
 
     $local.addEventListener('click', async () => {
-      const r = await ipcRenderer.invoke('local-mode');
-      setStatus(r.ok ? '已切换到本地模式' : `切换失败：${(r && r.msg) || '未知错误'}`);
+      try {
+        const r = await ipcRenderer.invoke('local-mode');
+        setFlash(r.ok ? '已切换到本地模式' : `切换失败：${(r && r.msg) || '未知错误'}`, !r.ok);
+      } catch (e) {
+        setFlash('切换失败：' + e.message, true);
+      }
     });
 
     $cache.addEventListener('click', async () => {
-      setStatus('正在下载缓存…');
-      const r = await ipcRenderer.invoke('cache-snapshot');
-      setStatus(r.ok ? '缓存成功！已保存完整页面' : `缓存失败：${(r && r.msg) || '未知错误'}`);
+      $cache.disabled = true;
+      $cache.textContent = '缓存中…';
+      setFlash('正在下载缓存，请稍候…');
+      try {
+        const r = await ipcRenderer.invoke('cache-snapshot');
+        setFlash(r.ok ? '缓存成功！已保存完整页面' : `缓存失败：${(r && r.msg) || '未知错误'}`, !r.ok);
+      } catch (e) {
+        setFlash('缓存失败：' + e.message, true);
+      } finally {
+        $cache.disabled = false;
+        $cache.textContent = '手动缓存';
+        pollState();
+      }
     });
 
     $admin.addEventListener('click', async () => {
       const r = await ipcRenderer.invoke('open-admin');
-      if (r && !r.ok) setStatus(`无法打开管理后台：${r.msg || '未知错误'}`);
+      if (r && !r.ok) setFlash(`无法打开管理后台：${r.msg || '未知错误'}`, true);
     });
 
     init();

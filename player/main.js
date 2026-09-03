@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, screen, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -14,6 +14,17 @@ let displayWin = null;
 let recoverTimer = null;
 let manualLocal = false;
 let caching = false;
+let forceQuit = false; // 用户确认退出后放行 close
+
+// 实时状态（控制面板轮询展示）
+const appState = {
+  mode: 'idle', // idle | starting | online | local | emergency
+  url: '',
+  events: [], // 最近事件（最新在前）
+};
+const MAX_EVENTS = 20;
+const AUTO_CACHE_HOURS = 12; // 距上次快照超过 12h，在线时后台自动更新
+const AUTO_CACHE_DELAY_MS = 30000; // 上线稳定后延迟 30s 再缓存，避免刚开机抢带宽
 
 /* ---------------- 配置读写 ---------------- */
 
@@ -51,6 +62,60 @@ function normalizeBaseUrl(input) {
 
 function displayUrl(base) {
   return base ? base + '/display' : '';
+}
+
+/* ---------------- 实时状态与自动缓存 ---------------- */
+
+function setMode(mode, url) {
+  appState.mode = mode;
+  if (url !== undefined) appState.url = url;
+}
+
+// 记录一条用户可见事件：写播放器日志 + 保存在内存（控制面板轮询展示）
+function pushEvent(msg) {
+  const t = new Date();
+  const ts = t.toLocaleTimeString('zh-CN', { hour12: false });
+  appState.events.unshift({ t: ts, msg });
+  if (appState.events.length > MAX_EVENTS) appState.events.pop();
+  log(ts + ' ' + msg);
+}
+
+// 本地快照的最新时间（api.json 的修改时间，0 = 从无快照）
+function lastSnapshotTime() {
+  const f = path.join(SNAP_DIR(), 'api.json');
+  try {
+    return fs.statSync(f).mtimeMs;
+  } catch (e) {
+    return 0;
+  }
+}
+
+// 在线播放稳定后，若快照过旧/缺失则后台自动更新（失败不打扰，等下次机会）
+function maybeAutoCache() {
+  if (manualLocal || caching) return;
+  if (!snapshotExists()) {
+    pushEvent('首次在线，后台准备本地快照…');
+    setTimeout(() => { cacheSnapshot(true); }, AUTO_CACHE_DELAY_MS);
+    return;
+  }
+  const ageH = (Date.now() - lastSnapshotTime()) / 3600000;
+  if (ageH >= AUTO_CACHE_HOURS) {
+    setTimeout(() => { cacheSnapshot(true); }, AUTO_CACHE_DELAY_MS);
+  }
+}
+
+// 程序版本：优先 version.json（构建脚本生成，含构建时间），退回 package.json
+function appVersion() {
+  try {
+    const v = JSON.parse(fs.readFileSync(path.join(__dirname, 'version.json'), 'utf8'));
+    if (v && v.version) return { version: String(v.version), buildTime: String(v.buildTime || '') };
+  } catch (e) { /* 忽略 */ }
+  try {
+    const p = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+    return { version: String(p.version || '0.0.0'), buildTime: '' };
+  } catch (e) {
+    return { version: '0.0.0', buildTime: '' };
+  }
 }
 
 /* ---------------- 网络检测与酒店名缓存 ---------------- */
@@ -214,8 +279,9 @@ function snapshotExists() {
   return fs.existsSync(path.join(SNAP_DIR(), 'index.html'));
 }
 
-// 手动缓存：下载完整展示页（HTML + JS/CSS + 数据 + 图片）到本地
-async function cacheSnapshot() {
+// 缓存完整展示页（HTML + JS/CSS + 数据 + 图片）到本地。
+// silent=true 为后台自动更新（失败只记日志，不打扰）
+async function cacheSnapshot(silent) {
   if (caching) return { ok: false, msg: '正在缓存中，请稍候' };
   caching = true;
   const base = normalizeBaseUrl(loadConfig().serverUrl);
@@ -223,7 +289,7 @@ async function cacheSnapshot() {
   const snapDir = SNAP_DIR();
   fs.mkdirSync(path.join(snapDir, 'assets'), { recursive: true });
   fs.mkdirSync(path.join(snapDir, 'uploads'), { recursive: true });
-  log('开始手动缓存: ' + base);
+  pushEvent((silent ? '后台更新快照' : '开始缓存') + ': ' + base);
   try {
     // 1) 展示页 HTML（失败自动重试）
     const htmlBuf = await downloadWithRetry(base + '/display');
@@ -259,11 +325,13 @@ async function cacheSnapshot() {
     }
     fs.writeFileSync(path.join(snapDir, 'api.json'), apiBuf);
     await startLocalServer();
-    log('手动缓存成功');
+    pushEvent(silent ? '后台快照已更新' : '缓存成功，已保存完整页面');
     return { ok: true };
   } catch (e) {
-    log('手动缓存失败: ' + (e && e.stack ? e.stack : e));
-    return { ok: false, msg: '缓存失败：' + (e.message || '未知错误') };
+    const msg = '缓存失败：' + (e.message || '未知错误');
+    pushEvent((silent ? '后台快照更新失败' : '缓存失败') + ': ' + (e.message || '未知错误'));
+    if (!silent) log('手动缓存失败: ' + (e && e.stack ? e.stack : e));
+    return { ok: false, msg };
   } finally {
     caching = false;
   }
@@ -337,10 +405,14 @@ function createDisplayWindow() {
     }
   });
 
-  // 成功加载线上页面时缓存酒店名
+  // 成功加载线上页面时缓存酒店名；快照过旧则后台自动更新
   displayWin.webContents.on('did-finish-load', () => {
     const cur = displayWin && !displayWin.isDestroyed() ? displayWin.webContents.getURL() : '';
-    if (cur.startsWith(displayUrl(base))) cacheHotelName(base);
+    if (cur.startsWith(displayUrl(base))) {
+      setMode('online', cur);
+      cacheHotelName(base);
+      maybeAutoCache();
+    }
   });
 
   displayWin.on('closed', () => {
@@ -352,7 +424,7 @@ function createDisplayWindow() {
 function openDisplay() {
   const base = normalizeBaseUrl(loadConfig().serverUrl);
   if (!base) return { ok: false, msg: '请先填写服务器地址' };
-
+  // 如果已在播放中：先清理旧窗口（避免重复开窗）
   if (displayWin && !displayWin.isDestroyed()) {
     displayWin.destroy();
     displayWin = null;
@@ -362,7 +434,8 @@ function openDisplay() {
 
   createDisplayWindow();
   displayWin.loadURL(displayUrl(base));
-  log('播放: ' + displayUrl(base));
+  setMode('starting', displayUrl(base));
+  pushEvent('开始播放: ' + displayUrl(base));
   return { ok: true, url: displayUrl(base), width: chooseDisplay().bounds.width };
 }
 
@@ -375,14 +448,18 @@ function showEmergency() {
     startLocalServer().then((port) => {
       if (port && displayWin && !displayWin.isDestroyed()) {
         displayWin.loadURL(`http://127.0.0.1:${port}/display`);
+        setMode('local', `http://127.0.0.1:${port}/display`);
       }
     });
+    pushEvent('网络异常，已切换到本地快照页面');
   } else {
     // 没有缓存 → 最后的兜底：本地时钟页
     const cfg = loadConfig();
     displayWin
       .loadFile(path.join(__dirname, 'emergency.html'), { query: { name: cfg.hotel_name || '' } })
       .catch(() => {});
+    setMode('emergency', '本地应急时钟');
+    pushEvent('网络异常且无快照，显示应急时钟');
   }
   startRecoverTimer();
 }
@@ -398,7 +475,11 @@ function startRecoverTimer() {
     const ok = await checkServer(url);
     if (ok) {
       stopRecoverTimer();
-      if (displayWin && !displayWin.isDestroyed()) displayWin.loadURL(url);
+      if (displayWin && !displayWin.isDestroyed()) {
+        displayWin.loadURL(url);
+        setMode('starting', url);
+        pushEvent('网络恢复，正在切回线上…');
+      }
     }
   }, 30000);
 }
@@ -423,6 +504,8 @@ async function enterLocalMode() {
     createDisplayWindow();
   }
   displayWin.loadURL(`http://127.0.0.1:${port}/display`);
+  setMode('local', `http://127.0.0.1:${port}/display`);
+  pushEvent('已切换到本地模式');
   log('本地模式: http://127.0.0.1:' + port + '/display');
   return { ok: true };
 }
@@ -433,6 +516,8 @@ function closeDisplay() {
   if (displayWin && !displayWin.isDestroyed()) {
     displayWin.destroy();
     displayWin = null;
+    setMode('idle', '');
+    pushEvent('已停止播放');
     return true;
   }
   return false;
@@ -453,6 +538,29 @@ function createControlWindow() {
     },
   });
 
+  // 电视正在播放时，误关控制窗口会直接导致大屏黑屏 → 弹确认框
+  controlWin.on('close', (e) => {
+    if (forceQuit) return;
+    const playing = displayWin && !displayWin.isDestroyed();
+    if (!playing) return; // 没在播，直接关
+    e.preventDefault();
+    dialog.showMessageBox(controlWin, {
+      type: 'question',
+      title: '确认退出',
+      message: '电视正在播放中',
+      detail: '关闭播放器将停止电视画面。确定要退出吗？',
+      buttons: ['取消', '退出'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    }).then((r) => {
+      if (r.response === 1) {
+        forceQuit = true;
+        app.quit();
+      }
+    }).catch(() => {});
+  });
+
   controlWin.loadFile('control.html');
   controlWin.on('closed', () => {
     controlWin = null;
@@ -468,7 +576,6 @@ function registerIpc() {
     const ok = saveConfig({ serverUrl: normalizeBaseUrl(cfg && cfg.serverUrl) });
     return { ok };
   });
-  ipcMain.handle('get-displays', () => displayInfo());
   ipcMain.handle('play', () => openDisplay());
   ipcMain.handle('stop', () => ({ ok: closeDisplay() }));
   ipcMain.handle('refresh', () => {
@@ -480,13 +587,17 @@ function registerIpc() {
     const current = displayWin.webContents.getURL();
     if (current && current.startsWith(url)) {
       displayWin.webContents.reloadIgnoringCache();
+      pushEvent('已强制刷新电视画面');
     } else {
       displayWin.loadURL(url);
+      setMode('starting', url);
+      pushEvent('已从本地切回线上画面');
     }
     return { ok: true };
   });
+  ipcMain.handle('get-displays', () => displayInfo());
   ipcMain.handle('local-mode', () => enterLocalMode());
-  ipcMain.handle('cache-snapshot', () => cacheSnapshot());
+  ipcMain.handle('cache-snapshot', () => cacheSnapshot(false));
   ipcMain.handle('open-admin', () => {
     const base = normalizeBaseUrl(loadConfig().serverUrl);
     if (!base) return { ok: false, msg: '请先填写服务器地址' };
@@ -498,6 +609,20 @@ function registerIpc() {
     return {
       display: displayUrl(base),
       admin: base ? base + '/admin' : '',
+    };
+  });
+  ipcMain.handle('get-version', () => appVersion());
+  ipcMain.handle('get-state', () => {
+    const t = lastSnapshotTime();
+    return {
+      mode: appState.mode,
+      url: appState.url,
+      events: appState.events.slice(0, MAX_EVENTS),
+      playing: !!(displayWin && !displayWin.isDestroyed()),
+      snapshotTime: t
+        ? new Date(t).toLocaleString('zh-CN', { hour12: false })
+        : null,
+      manualLocal,
     };
   });
 }
@@ -521,6 +646,7 @@ if (!gotLock) {
   });
 
   app.on('window-all-closed', () => {
+    // 播放中关窗已被 close 拦截（需确认）；到这里说明确实要退出
     app.quit();
   });
 }
