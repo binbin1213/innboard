@@ -570,7 +570,7 @@ export default function Display() {
                     className="truncate leading-none"
                     style={{
                       fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
-                      fontWeight: 700,
+                      fontWeight: 900,
                       fontSize: 48,
                       color: '#D8B06A',
                       letterSpacing: 2,
@@ -581,9 +581,10 @@ export default function Display() {
                   <div
                     className="leading-none mt-3"
                     style={{
-                      fontSize: 15,
+                      fontSize: 26,
+                      fontWeight: 600,
                       color: 'rgba(216,176,106,0.9)',
-                      letterSpacing: 3,
+                      letterSpacing: 5,
                     }}
                   >
                     {data.hotel_name_en || ''}
