@@ -104,8 +104,11 @@ app = FastAPI(
     openapi_url=None if IS_PRODUCTION else "/openapi.json",
 )
 
-# 这两个接口允许客户端缓存后再校验（配合 ETag 返回 304），其余 API 一律不缓存
-REVALIDATE_PATHS = {"/api/display"}
+# 所有 API 一律 no-store，禁止任何中间层缓存。
+# 历史教训：/api/display 曾用 no-cache+ETag(排除 server_time) 做 304 优化，
+# 但 Cloudflare 边缘缓存了完整响应体且 revalidate 恒得 304 → server_time 永不更新，
+# 电视端时钟校准被拽回缓存时刻，右上角分钟卡死。故 display 也必须 no-store，每次回源实时生成。
+REVALIDATE_PATHS = set()
 
 
 class NoStoreMiddleware:

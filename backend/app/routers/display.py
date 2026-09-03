@@ -76,15 +76,16 @@ def get_display(request: Request, db: Session = Depends(get_db)):
         "server_time": datetime.now().astimezone().isoformat(),
     }
 
-    # server_time 每次请求都在变，必须排除在 ETag 之外，否则缓存永不命中。
-    # 客户端已用首次返回的 server_time 算出时钟偏移，304 时沿用即可。
+    # 2026-09-03 修复：ETag 曾排除 server_time 以支持 304 复用，
+    # 但 CF 边缘缓存+恒 304 导致 server_time 被冻结（电视端时钟分钟卡死）。
+    # 现强制 no-store：每次请求回源生成实时 server_time；ETag 仅作调试保留，不再承担缓存协商。
     fingerprint = {k: v for k, v in payload.items() if k != "server_time"}
     digest = hashlib.md5(
         json.dumps(fingerprint, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
     ).hexdigest()
     etag = f'"{digest}"'
 
-    headers = {"ETag": etag, "Cache-Control": "no-cache"}
+    headers = {"ETag": etag, "Cache-Control": "no-store"}
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304, headers=headers)
 
