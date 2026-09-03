@@ -3,6 +3,7 @@
   "productName": "柏维酒店房价牌专用播放器",
   "version": "1.2.0",
   "description": "酒店智能房价牌 Windows 播放器（Win7 64 位可用）",
+  "author": "binbin1213",
   "main": "main.js",
   "private": true,
   "scripts": {

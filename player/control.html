@@ -198,6 +198,13 @@
       word-break: break-all;
     }
     .status b { color: var(--gold); font-weight: 600; }
+    .copy {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
 <body>
@@ -260,6 +267,8 @@
     <div class="flash" id="flash"></div>
     <div class="events" id="events"></div>
   </div>
+
+  <div class="copy">© 2026 binbin1213 · 版权所有</div>
 
   <script>
     const { ipcRenderer } = require('electron');
