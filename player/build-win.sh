@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 ELECTRON_VERSION="22.3.27"
-APP_NAME="innboard-player"
+APP_NAME="BiwayHotel-Player"
 
 # 1) 在 Electron 缓存目录里查找已下载的 win32 包
 ZIP=""

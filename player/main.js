@@ -530,7 +530,7 @@ function createControlWindow() {
     width: 470,
     height: 800,
     resizable: true,
-    title: '房价牌播放器',
+    title: '柏维酒店房价牌专用播放器',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
