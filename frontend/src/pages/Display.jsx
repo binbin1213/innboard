@@ -581,7 +581,7 @@ export default function Display() {
                   <div
                     className="leading-none mt-3"
                     style={{
-                      fontSize: 26,
+                      fontSize: 22,
                       fontWeight: 600,
                       color: 'rgba(216,176,106,0.9)',
                       letterSpacing: 5,
