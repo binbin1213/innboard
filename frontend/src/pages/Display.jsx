@@ -1,4 +1,4 @@
-import { Fragment, memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, memo, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import {
   BedIcon,
@@ -350,162 +350,17 @@ function RoomCard({ room, flashed }) {
   )
 }
 
-// ===== 欢迎致辞文字自适应排版 =====
-// 旧实现按字数分档给字号，不看容器实际宽度，档位跳完后仍可能超宽 → 末尾几个字被挤成孤行
-// 新实现：canvas 实测文本宽度，反推"不溢出且尽量撑满"的最大字号；单行放不下时自动均衡折行
-// 同时支持后台文案里的手动换行（回车即断行，优先级最高）
-
-// 字体栈：与页面实际渲染保持一致，canvas 测量才能等价于 DOM 渲染
-const WELCOME_SERIF = '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif'
-const WELCOME_SANS = "'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif"
-
-const _welcomeCtx = (() => {
-  let ctx = null
-  return () => {
-    if (!ctx) ctx = document.createElement('canvas').getContext('2d')
-    return ctx
-  }
-})()
-
-// 文本渲染宽度（含字距；CSS letter-spacing 在每个字后都加，含末字）
-function welcomeTextWidth(text, fontSize, fontFamily, fontWeight, letterSpacing) {
-  const ctx = _welcomeCtx()
-  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
-  return ctx.measureText(text).width + letterSpacing * Array.from(text).length
-}
-
-// 尽量均分成 lines 行（多出的字优先放前面的行），避免"最后一行只剩一两个字"的孤行
-function welcomeBalancedLines(chars, lines) {
-  const base = Math.floor(chars.length / lines)
-  const extra = chars.length % lines
-  const out = []
-  let i = 0
-  for (let k = 0; k < lines; k++) {
-    const len = base + (k < extra ? 1 : 0)
-    out.push(chars.slice(i, i + len).join(''))
-    i += len
-  }
-  return out
-}
-
-// 给定断行结果，求同时满足"宽度不溢出"与"高度不超框"的最大字号
-function welcomeFontForLines(lines, opts) {
-  const { availW, availH, maxFont, lineHeight, fontFamily, fontWeight, letterSpacing } = opts
-  // 渲染时会给每段补一个左内边距（补偿末字字距），这里先扣掉，避免量出来刚好超宽
-  const usableW = Math.max(1, availW - letterSpacing)
-  let f = maxFont
-  lines.forEach((line) => {
-    if (!line) return
-    const w100 = welcomeTextWidth(line, 100, fontFamily, fontWeight, letterSpacing)
-    if (w100 > 0) f = Math.min(f, (usableW * 100) / w100) // 宽度随字号线性变化
-  })
-  f = Math.min(f, availH / (Math.max(1, lines.length) * lineHeight))
-  return Math.floor(f)
-}
-
-// 核心：返回 { lines: [...], fontSize }
-function welcomeFitText(raw, opts) {
-  const { minFont, maxLines } = opts
-  const text = String(raw || '')
-  const manual = text.split('\n').map((s) => s.trim()).filter(Boolean)
-  // 手动换行优先：用户自己定的断点照办（只要字号不低于可读下限）
-  if (manual.length > 1) {
-    const f = welcomeFontForLines(manual, opts)
-    if (f >= minFont) return { lines: manual, fontSize: f }
-  }
-  const chars = Array.from(manual.join(''))
-  if (!chars.length) return { lines: [], fontSize: 0 }
-  const limit = Math.max(1, Math.min(maxLines, chars.length))
-  let best = null
-  for (let L = 1; L <= limit; L++) {
-    const lines = L === 1 ? [chars.join('')] : welcomeBalancedLines(chars, L)
-    const f = welcomeFontForLines(lines, opts)
-    if (f < minFont) continue
-    // 多断一行要换来明显更大的字（>15%）才值得，否则保持行数更少
-    if (!best || f > best.fontSize * 1.15) best = { lines, fontSize: f }
-  }
-  if (best) return best
-  const lines = welcomeBalancedLines(chars, limit)
-  return { lines, fontSize: Math.max(16, welcomeFontForLines(lines, opts)) }
-}
-
-// 三段文字规格：颜色/字重/字距/字号区间，视觉基调与既有设计一致
-const WELCOME_SPECS = {
-  title: {
-    maxFont: 126, minFont: 56, maxLines: 2, letterSpacing: 8, fontWeight: 900,
-    lineHeight: 1.15, fontFamily: WELCOME_SERIF,
-    color: '#E8C872', textShadow: '0 4px 24px rgba(0,0,0,0.55)', gap: 0,
-  },
-  subtitle: {
-    maxFont: 120, minFont: 48, maxLines: 3, letterSpacing: 6, fontWeight: 900,
-    lineHeight: 1.18, fontFamily: WELCOME_SANS,
-    color: '#DE2910', textShadow: '0 3px 18px rgba(0,0,0,0.6)', gap: 16,
-  },
-  message: {
-    maxFont: 50, minFont: 26, maxLines: 3, letterSpacing: 3, fontWeight: 400,
-    lineHeight: 1.35, fontFamily: WELCOME_SANS,
-    color: 'rgba(255,255,255,0.92)', textShadow: '0 2px 12px rgba(0,0,0,0.6)', gap: 12,
-  },
-}
-const WELCOME_KEYS = ['title', 'subtitle', 'message']
-
 // 欢迎致辞横幅：优先显示，覆盖图片轮播区
 // 支持：文字（主标题/副标题/落款）自由填写 + 可选背景图（文字叠加在图上）
-// 布局：文字撑满整个横幅，四周只留少量边距；字号与断行按实测宽度自适应
+// 布局：文字撑满整个横幅，四周只留少量边距；长文本自动降字号防溢出
 function WelcomeBanner({ welcome, hotelName, themeCss }) {
-  const { image_url } = welcome
-  const middleRef = useRef(null)
-  const [fit, setFit] = useState({})
-  const [fontsReady, setFontsReady] = useState(false)
-
-  // 字体加载完成后再量一次，避免用回退字体量出的宽度偏差
-  useEffect(() => {
-    if (!document.fonts || !document.fonts.ready) {
-      setFontsReady(true)
-      return undefined
-    }
-    let alive = true
-    document.fonts.ready.then(() => {
-      if (alive) setFontsReady(true)
-    })
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  // 测量中间文字区实际可用宽高，算出每段文字的断行与字号
-  useLayoutEffect(() => {
-    const el = middleRef.current
-    if (!el) return
-    const availW = el.clientWidth
-    const availH = el.clientHeight
-    if (!availW || !availH) return
-    const keys = WELCOME_KEYS.filter((k) => String(welcome[k] || '').trim())
-    if (!keys.length) {
-      setFit({})
-      return
-    }
-    const next = {}
-    keys.forEach((k) => {
-      next[k] = welcomeFitText(welcome[k], { availW, availH, ...WELCOME_SPECS[k] })
-    })
-    // 三段共享中间区高度：总高超出可用高度时整体等比缩小字号（断行保持不变）
-    let total = 0
-    keys.forEach((k, i) => {
-      total += next[k].fontSize * WELCOME_SPECS[k].lineHeight * Math.max(1, next[k].lines.length)
-      if (i > 0) total += WELCOME_SPECS[k].gap
-    })
-    if (total > availH) {
-      const k2 = availH / total
-      keys.forEach((k) => {
-        next[k] = { ...next[k], fontSize: Math.max(16, Math.floor(next[k].fontSize * k2)) }
-      })
-    }
-    setFit(next)
-  }, [welcome.title, welcome.subtitle, welcome.message, fontsReady])
-
-  const present = WELCOME_KEYS.filter((k) => String(welcome[k] || '').trim())
-
+  const { title, subtitle, message, image_url } = welcome
+  // 按字数自适应字号：越短越大，长文本自动降级避免换行溢出
+  // 字数按"可见字符"计（前台手动回车换行不计入），保证自己断行不会改变字号档位
+  const len = (v) => String(v || '').replace(/\n/g, '').length
+  const titleFont = len(title) > 10 ? 92 : len(title) > 6 ? 108 : 126
+  const subtitleFont = len(subtitle) > 12 ? 68 : len(subtitle) > 8 ? 80 : 96
+  const messageFont = len(message) > 24 ? 36 : len(message) > 14 ? 42 : 50
   return (
     <div className="absolute inset-0 overflow-hidden">
       {/* 背景：有图用图，无图用主题渐变 */}
@@ -528,34 +383,53 @@ function WelcomeBanner({ welcome, hotelName, themeCss }) {
           <div className="h-[2px] w-20 bg-[#D4AF37]/70" />
         </div>
 
-        {/* 中间文字区：垂直占满剩余高度，字号/断行由测量结果决定 */}
-        <div ref={middleRef} className="flex-1 min-h-0 w-full flex flex-col items-center justify-center text-center">
-          {present.map((k, i) => {
-            const spec = WELCOME_SPECS[k]
-            const laid = fit[k]
-            if (!laid) return null
-            return (
-              <div
-                key={k}
-                className="w-full"
-                style={{
-                  marginTop: i === 0 ? 0 : spec.gap,
-                  fontFamily: spec.fontFamily,
-                  fontSize: laid.fontSize,
-                  fontWeight: spec.fontWeight,
-                  lineHeight: spec.lineHeight,
-                  letterSpacing: spec.letterSpacing,
-                  // 末字后也有字距，补左内边距让整块视觉居中
-                  paddingLeft: spec.letterSpacing,
-                  color: spec.color,
-                  textShadow: spec.textShadow,
-                  whiteSpace: 'pre-line',
-                }}
-              >
-                {laid.lines.join('\n')}
-              </div>
-            )
-          })}
+        {/* 中间文字区：垂直占满剩余高度 */}
+        <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center text-center">
+          {title && (
+            <div
+              className="leading-tight w-full"
+              style={{
+                fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
+                fontSize: titleFont,
+                fontWeight: 900,
+                letterSpacing: 8,
+                color: '#E8C872',
+                whiteSpace: 'pre-line',
+                textShadow: '0 4px 24px rgba(0,0,0,0.55)',
+              }}
+            >
+              {title}
+            </div>
+          )}
+          {subtitle && (
+            <div
+              className="mt-4 w-full"
+              style={{
+                fontSize: subtitleFont,
+                fontWeight: 900,
+                letterSpacing: 6,
+                color: '#DE2910',
+                whiteSpace: 'pre-line',
+                textShadow: '0 3px 18px rgba(0,0,0,0.6)',
+              }}
+            >
+              {subtitle}
+            </div>
+          )}
+          {message && (
+            <div
+              className="mt-3 w-full"
+              style={{
+                fontSize: messageFont,
+                letterSpacing: 3,
+                color: 'rgba(255,255,255,0.92)',
+                whiteSpace: 'pre-line',
+                textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+              }}
+            >
+              {message}
+            </div>
+          )}
         </div>
 
         {/* 底部落款：酒店名，右下角 */}
