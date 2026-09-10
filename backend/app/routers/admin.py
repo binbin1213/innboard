@@ -460,12 +460,31 @@ async def upload_qr(file: UploadFile = File(...), db: Session = Depends(get_db),
 
 # ---------- 欢迎致辞 ----------
 
+def _px_setting(db: Session, key: str) -> int:
+    """读取字号设置：空值/非法值一律按 0（自动）处理。"""
+    try:
+        return max(0, int(get_setting(db, key) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _clamp_px(value, lo: int = 40, hi: int = 240) -> int:
+    """0 保留为"自动"；非零值收敛到 [lo, hi]，防止误填把字挤出屏幕。"""
+    try:
+        v = int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+    return 0 if v <= 0 else min(max(v, lo), hi)
+
+
 class WelcomeBody(BaseModel):
     enabled: bool = True
     title: str = ""
     subtitle: str = ""
     message: str = ""
     end_time: str = ""
+    title_font: int = 0  # 0 = 自动（按字数分档）
+    subtitle_font: int = 0
 
 
 def welcome_dict(db: Session) -> dict:
@@ -475,6 +494,8 @@ def welcome_dict(db: Session) -> dict:
         "title": get_setting(db, "welcome_title"),
         "subtitle": get_setting(db, "welcome_subtitle"),
         "message": get_setting(db, "welcome_message"),
+        "title_font": _px_setting(db, "welcome_title_font"),
+        "subtitle_font": _px_setting(db, "welcome_subtitle_font"),
         "image_url": f"/uploads/{logo}" if logo else "",
         "end_time": get_setting(db, "welcome_end_time"),
         "hotel_name": get_setting(db, "hotel_name"),
@@ -493,6 +514,8 @@ def update_welcome(body: WelcomeBody, db: Session = Depends(get_db), _: str = De
     set_setting(db, "welcome_subtitle", body.subtitle.strip())
     set_setting(db, "welcome_message", body.message.strip())
     set_setting(db, "welcome_end_time", body.end_time.strip())
+    set_setting(db, "welcome_title_font", str(_clamp_px(body.title_font)))
+    set_setting(db, "welcome_subtitle_font", str(_clamp_px(body.subtitle_font)))
     db.commit()
     return welcome_dict(db)
 

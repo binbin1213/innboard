@@ -13,6 +13,14 @@ from ..weather import get_weather
 router = APIRouter(prefix="/api", tags=["display"])
 
 
+def _px(value) -> int:
+    """字号（px）：空值/非法值返回 0，表示前端按自动档处理。"""
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def get_welcome(db: Session) -> dict:
     """欢迎致辞配置：enabled 含到期自动失效判断（到期自动恢复图片轮播）。"""
     enabled = get_setting(db, "welcome_enabled") == "1"
@@ -30,6 +38,8 @@ def get_welcome(db: Session) -> dict:
         "title": get_setting(db, "welcome_title"),
         "subtitle": get_setting(db, "welcome_subtitle"),
         "message": get_setting(db, "welcome_message"),
+        "title_font": _px(get_setting(db, "welcome_title_font")),
+        "subtitle_font": _px(get_setting(db, "welcome_subtitle_font")),
         "image_url": f"/uploads/{image}" if image else "",
         "end_time": end_time,
     }

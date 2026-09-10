@@ -12,6 +12,8 @@ export default function WelcomePage() {
   const [saved, setSaved] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const inputRef = useRef(null)
+  const previewRef = useRef(null)
+  const [previewW, setPreviewW] = useState(0)
 
   const load = () => {
     api
@@ -23,6 +25,8 @@ export default function WelcomePage() {
           subtitle: data.subtitle,
           message: data.message,
           end_time: data.end_time,
+          title_font: data.title_font || 0,
+          subtitle_font: data.subtitle_font || 0,
         })
         setImageUrl(data.image_url)
         setHotelName(data.hotel_name || '')
@@ -79,11 +83,35 @@ export default function WelcomePage() {
     }
   }
 
+  useEffect(() => {
+    const el = previewRef.current
+    if (!el) return
+    const update = () => setPreviewW(el.clientWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [form])
+
   if (!form) {
     return <div className="text-gray-500">加载中…</div>
   }
   const inputCls =
     'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500'
+  // 与展示端一致的字号分档（未自定义时用它）
+  const vlen = (v) => String(v || '').replace(/\n/g, '').length
+  const autoTitle = vlen(form.title) > 10 ? 92 : vlen(form.title) > 6 ? 108 : 126
+  const autoSubtitle = vlen(form.subtitle) > 12 ? 68 : vlen(form.subtitle) > 8 ? 80 : 96
+  const autoMessage = vlen(form.message) > 24 ? 36 : vlen(form.message) > 14 ? 42 : 50
+  const titleFont = Number(form.title_font) > 0 ? Number(form.title_font) : autoTitle
+  const subtitleFont = Number(form.subtitle_font) > 0 ? Number(form.subtitle_font) : autoSubtitle
+  // 大屏横幅文字可用宽 920px（横幅 1000 − 内边距 40×2）
+  const widest = (text, font, spacing) =>
+    String(text || '')
+      .split('\n')
+      .reduce((m, line) => Math.max(m, [...line].length * (font + spacing)), 0)
+  // 预览缩放：真实横幅 1000×565 → 预览容器实测宽度的等比缩放
+  const sc = previewW > 0 ? Math.min(1, previewW / 1000) : 0.6
 
   return (
     <div>
@@ -109,7 +137,7 @@ export default function WelcomePage() {
         {/* 三段文字：支持回车手动换行，大屏按你的断点显示 */}
         <div className="grid gap-4 mb-5">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">主标题（金色大字，如"热烈欢迎"）</label>
+            <label className="block text-sm text-gray-600 mb-1">主标题（中国红大字，如"热烈欢迎"）</label>
             <textarea
               className={inputCls + ' resize-none'}
               rows={2}
@@ -118,9 +146,41 @@ export default function WelcomePage() {
               placeholder="热烈欢迎"
               onChange={(e) => set('title', e.target.value)}
             />
+            <div className="flex flex-wrap items-center gap-3 mt-2">
+              <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-green-600"
+                  checked={Number(form.title_font) > 0}
+                  onChange={(e) => set('title_font', e.target.checked ? autoTitle : 0)}
+                />
+                自定义字号
+              </label>
+              {Number(form.title_font) > 0 ? (
+                <>
+                  <input
+                    type="range"
+                    min="40"
+                    max="220"
+                    step="2"
+                    className="w-52 accent-green-600"
+                    value={form.title_font}
+                    onChange={(e) => set('title_font', Number(e.target.value))}
+                  />
+                  <span className="text-xs text-gray-700 w-12">{form.title_font}px</span>
+                </>
+              ) : (
+                <span className="text-xs text-gray-400">自动（按字数：当前 {autoTitle}px）</span>
+              )}
+            </div>
+            {Number(form.title_font) > 0 && widest(form.title, Number(form.title_font), 8) > 920 && (
+              <span className="text-xs text-red-500 block">
+                ⚠️ 最长一行约 {widest(form.title, Number(form.title_font), 8)}px，超出可用宽 920px，大屏上会折行
+              </span>
+            )}
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">副标题（中国红大字，如"XX旅行社贵宾团莅临"）</label>
+            <label className="block text-sm text-gray-600 mb-1">副标题（金色大字，如"XX旅行社贵宾团莅临"）</label>
             <textarea
               className={inputCls + ' resize-none'}
               rows={2}
@@ -129,9 +189,41 @@ export default function WelcomePage() {
               placeholder="XX旅行社贵宾团莅临"
               onChange={(e) => set('subtitle', e.target.value)}
             />
+            <div className="flex flex-wrap items-center gap-3 mt-2">
+              <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-green-600"
+                  checked={Number(form.subtitle_font) > 0}
+                  onChange={(e) => set('subtitle_font', e.target.checked ? autoSubtitle : 0)}
+                />
+                自定义字号
+              </label>
+              {Number(form.subtitle_font) > 0 ? (
+                <>
+                  <input
+                    type="range"
+                    min="40"
+                    max="180"
+                    step="2"
+                    className="w-52 accent-green-600"
+                    value={form.subtitle_font}
+                    onChange={(e) => set('subtitle_font', Number(e.target.value))}
+                  />
+                  <span className="text-xs text-gray-700 w-12">{form.subtitle_font}px</span>
+                </>
+              ) : (
+                <span className="text-xs text-gray-400">自动（按字数：当前 {autoSubtitle}px）</span>
+              )}
+            </div>
+            {Number(form.subtitle_font) > 0 && widest(form.subtitle, Number(form.subtitle_font), 6) > 920 && (
+              <span className="text-xs text-red-500 block">
+                ⚠️ 最长一行约 {widest(form.subtitle, Number(form.subtitle_font), 6)}px，超出可用宽 920px，大屏上会折行
+              </span>
+            )}
             <span className="text-xs text-gray-400">
-              不想换行就不用按回车——大屏会按实测宽度自动排字号，不会溢出、也不会出现单字孤行；
-              想自己控制断点位置（如"鎏金万像五部连拍／杀青晚宴"），直接按回车换行即可。
+              勾选「自定义字号」后拖滑块即可自己定字号；不勾则按字数自动分档（主 126/108/92，副 96/80/68，回车不计入字数）。
+              想控制断点位置（如"鎏金万像五部连拍／杀青晚宴"）直接按回车换行。
             </span>
           </div>
           <div>
@@ -205,44 +297,101 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* 预览 */}
+      {/* 预览：按真实横幅比例缩放（真实 1000×565），字号/字距同步缩放，所见即所得 */}
       <div className="bg-white rounded-xl shadow p-6">
         <h3 className="text-sm font-medium text-gray-600 mb-3">大屏预览</h3>
-        <div className="relative h-56 rounded-xl overflow-hidden bg-[#0b1220] border">
+        <div ref={previewRef} className="w-full">
           {form.enabled ? (
-            <>
+            <div
+              className="relative rounded-2xl overflow-hidden bg-black/20 mx-auto"
+              style={{ width: Math.round(1000 * sc), height: Math.round(565 * sc) }}
+            >
               {imageUrl ? (
                 <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-[#0b1220] via-[#0d1a30] to-[#1a2b4a]" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#080f1c] via-[#0b1220] to-[#141f36]" />
               )}
               <div className="absolute inset-0 bg-black/40" />
-              <div className="absolute top-3 inset-x-0 text-center text-[#D4AF37] tracking-[0.4em] text-xs">
-                WELCOME
+              <div className="absolute inset-x-0 flex items-center justify-center" style={{ top: 20 * sc, gap: 20 * sc }}>
+                <span className="bg-[#D4AF37]/70" style={{ height: 2 * sc, width: 80 * sc }} />
+                <span
+                  className="text-[#D4AF37]"
+                  style={{ fontSize: 32 * sc, letterSpacing: 0.6 * 32 * sc, paddingLeft: 0.6 * 32 * sc }}
+                >
+                  WELCOME
+                </span>
+                <span className="bg-[#D4AF37]/70" style={{ height: 2 * sc, width: 80 * sc }} />
               </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 whitespace-pre-line">
-                <div className="text-[#E8C872] font-black text-4xl" style={{ letterSpacing: 4 }}>
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center text-center"
+                style={{ paddingLeft: 40 * sc, paddingRight: 40 * sc }}
+              >
+                <div
+                  style={{
+                    fontFamily: '"Source Han Serif SC", "思源宋体", "Noto Serif SC", serif',
+                    fontSize: titleFont * sc,
+                    fontWeight: 900,
+                    letterSpacing: 8 * sc,
+                    lineHeight: 1.15,
+                    color: '#DE2910',
+                    whiteSpace: 'pre-line',
+                    textShadow: '0 4px 24px rgba(0,0,0,0.55)',
+                  }}
+                >
                   {form.title || '热烈欢迎'}
                 </div>
                 {form.subtitle && (
-                  <div className="mt-2 text-[#DE2910] text-2xl font-black whitespace-pre-line">
+                  <div
+                    style={{
+                      marginTop: 16 * sc,
+                      fontSize: subtitleFont * sc,
+                      fontWeight: 900,
+                      letterSpacing: 6 * sc,
+                      lineHeight: 1.15,
+                      color: '#E8C872',
+                      whiteSpace: 'pre-line',
+                      textShadow: '0 3px 18px rgba(0,0,0,0.6)',
+                    }}
+                  >
                     {form.subtitle}
                   </div>
                 )}
                 {form.message && (
-                  <div className="mt-2 text-white/90 text-sm whitespace-pre-line">{form.message}</div>
+                  <div
+                    style={{
+                      marginTop: 12 * sc,
+                      fontSize: autoMessage * sc,
+                      letterSpacing: 3 * sc,
+                      color: 'rgba(255,255,255,0.92)',
+                      whiteSpace: 'pre-line',
+                    }}
+                  >
+                    {form.message}
+                  </div>
                 )}
               </div>
-              <div className="absolute bottom-2 right-3 text-[#E8C872]/85 text-xs tracking-[0.3em]">
+              <div
+                className="absolute text-right"
+                style={{
+                  right: 24 * sc,
+                  bottom: 12 * sc,
+                  fontSize: 28 * sc,
+                  letterSpacing: 4 * sc,
+                  color: 'rgba(232,200,114,0.85)',
+                }}
+              >
                 {hotelName || '酒店名称'}
               </div>
-            </>
+            </div>
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+            <div className="h-56 rounded-xl overflow-hidden bg-[#0b1220] border flex items-center justify-center text-gray-400 text-sm">
               欢迎致辞未启用
             </div>
           )}
         </div>
+        <p className="text-xs text-gray-400 mt-3">
+          预览按真实比例缩放（大屏横幅实际 1000×565，文字可用宽 920px），字号所见即所得。
+        </p>
       </div>
 
       <ConfirmModal

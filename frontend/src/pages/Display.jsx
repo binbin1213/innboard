@@ -358,8 +358,11 @@ function WelcomeBanner({ welcome, hotelName, themeCss }) {
   // 按字数自适应字号：越短越大，长文本自动降级避免换行溢出
   // 字数按"可见字符"计（前台手动回车换行不计入），保证自己断行不会改变字号档位
   const len = (v) => String(v || '').replace(/\n/g, '').length
-  const titleFont = len(title) > 10 ? 92 : len(title) > 6 ? 108 : 126
-  const subtitleFont = len(subtitle) > 12 ? 68 : len(subtitle) > 8 ? 80 : 96
+  // 字号优先级：后台手动设定（>0）> 按字数分档自动
+  const px = (v) => (Number(v) > 0 ? Number(v) : 0)
+  const titleFont = px(welcome.title_font) || (len(title) > 10 ? 92 : len(title) > 6 ? 108 : 126)
+  const subtitleFont =
+    px(welcome.subtitle_font) || (len(subtitle) > 12 ? 68 : len(subtitle) > 8 ? 80 : 96)
   const messageFont = len(message) > 24 ? 36 : len(message) > 14 ? 42 : 50
   return (
     <div className="absolute inset-0 overflow-hidden">
