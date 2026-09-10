@@ -106,12 +106,13 @@ export default function WelcomePage() {
           <span className="font-medium">启用欢迎致辞（大屏显示）</span>
         </label>
 
-        {/* 三段文字 */}
+        {/* 三段文字：支持回车手动换行，大屏按你的断点显示 */}
         <div className="grid gap-4 mb-5">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">主标题（大字，如"热烈欢迎"）</label>
-            <input
-              className={inputCls}
+            <label className="block text-sm text-gray-600 mb-1">主标题（金色大字，如"热烈欢迎"）</label>
+            <textarea
+              className={inputCls + ' resize-none'}
+              rows={2}
               value={form.title}
               maxLength={30}
               placeholder="热烈欢迎"
@@ -119,19 +120,25 @@ export default function WelcomePage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">副标题（金色，如"XX旅行社贵宾团莅临"）</label>
-            <input
-              className={inputCls}
+            <label className="block text-sm text-gray-600 mb-1">副标题（中国红大字，如"XX旅行社贵宾团莅临"）</label>
+            <textarea
+              className={inputCls + ' resize-none'}
+              rows={2}
               value={form.subtitle}
               maxLength={40}
               placeholder="XX旅行社贵宾团莅临"
               onChange={(e) => set('subtitle', e.target.value)}
             />
+            <span className="text-xs text-gray-400">
+              不想换行就不用按回车——大屏会按实测宽度自动排字号，不会溢出、也不会出现单字孤行；
+              想自己控制断点位置（如"鎏金万像五部连拍／杀青晚宴"），直接按回车换行即可。
+            </span>
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">落款（白色小字，如"祝您入住愉快，旅途平安"）</label>
-            <input
-              className={inputCls}
+            <textarea
+              className={inputCls + ' resize-none'}
+              rows={2}
               value={form.message}
               maxLength={60}
               placeholder="祝您入住愉快，旅途平安"
@@ -213,12 +220,18 @@ export default function WelcomePage() {
               <div className="absolute top-3 inset-x-0 text-center text-[#D4AF37] tracking-[0.4em] text-xs">
                 WELCOME
               </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 whitespace-pre-line">
                 <div className="text-[#E8C872] font-black text-4xl" style={{ letterSpacing: 4 }}>
                   {form.title || '热烈欢迎'}
                 </div>
-                {form.subtitle && <div className="mt-2 text-[#DE2910] text-2xl font-black">{form.subtitle}</div>}
-                {form.message && <div className="mt-2 text-white/90 text-sm">{form.message}</div>}
+                {form.subtitle && (
+                  <div className="mt-2 text-[#DE2910] text-2xl font-black whitespace-pre-line">
+                    {form.subtitle}
+                  </div>
+                )}
+                {form.message && (
+                  <div className="mt-2 text-white/90 text-sm whitespace-pre-line">{form.message}</div>
+                )}
               </div>
               <div className="absolute bottom-2 right-3 text-[#E8C872]/85 text-xs tracking-[0.3em]">
                 {hotelName || '酒店名称'}
