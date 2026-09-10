@@ -31,7 +31,6 @@ export default function WelcomePage() {
           title_font: data.title_font || 0,
           subtitle_font: data.subtitle_font || 0,
           bg_mode: data.bg_mode || 'image',
-          video_fullscreen: data.video_fullscreen !== false,
         })
         setImageUrl(data.image_url)
         setVideoUrl(data.video_url || '')
@@ -306,7 +305,7 @@ export default function WelcomePage() {
                 checked={(form.bg_mode || 'image') === 'video'}
                 onChange={() => set('bg_mode', 'video')}
               />
-              视频（整屏只播视频，不显示任何其他内容）
+              视频（只占这条横幅，不叠加任何文字）
             </label>
           </div>
 
@@ -333,19 +332,12 @@ export default function WelcomePage() {
                   onChange={onUploadVideo}
                 />
               </div>
-              <label className="mt-3 flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 accent-green-600"
-                  checked={form.video_fullscreen !== false}
-                  onChange={(e) => set('video_fullscreen', e.target.checked)}
-                />
-                整屏独占播放（隐藏时钟、房态卡片等全部内容）
-              </label>
               <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                建议 H.264 编码的 mp4，720p / 1080p，≤ 30MB；大屏静音循环播放。
+                建议 H.264 编码的 mp4，<b>横屏 16:9（1920×1080 或 1280×720）</b>，≤ 60MB；
+                <b>竖屏视频两侧会被裁掉</b>。大屏静音循环播放。
                 <br />
-                视频模式下主标题、副标题、落款、遮罩全部不显示——只播视频。
+                视频只占大屏那条横幅（原来的照片位，1000×565）：这一条里不叠任何文字/遮罩，
+                上方的时钟天气、下面的房价牌、公告、二维码全部照常显示。
               </p>
               {videoUrl && (
                 <video
@@ -508,6 +500,8 @@ export default function WelcomePage() {
         </div>
         <p className="text-xs text-gray-400 mt-3">
           预览按真实比例缩放（大屏横幅实际 1000×565，文字可用宽 920px），字号所见即所得。
+          <br />
+          视频模式下视频铺满这一条（object-cover 裁边不留黑边），本条以外的区域不受影响。
         </p>
       </div>
 

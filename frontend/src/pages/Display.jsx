@@ -352,6 +352,8 @@ function RoomCard({ room, flashed }) {
 
 // 欢迎致辞横幅：优先显示，覆盖图片轮播区
 // 支持：文字（主标题/副标题/落款）自由填写 + 可选背景图（文字叠加在图上）
+// 视频模式：视频只顶替“背景照片”这个位置（铺满本条横幅），本条内不叠任何文字/遮罩；
+//          横幅以外的时钟、天气、房价牌、公告、二维码全部照常渲染
 // 布局：文字撑满整个横幅，四周只留少量边距；长文本自动降字号防溢出
 function WelcomeBanner({ welcome, hotelName, themeCss }) {
   const { title, subtitle, message, image_url } = welcome
@@ -364,7 +366,7 @@ function WelcomeBanner({ welcome, hotelName, themeCss }) {
   const subtitleFont =
     px(welcome.subtitle_font) || (len(subtitle) > 12 ? 68 : len(subtitle) > 8 ? 80 : 96)
   const messageFont = len(message) > 24 ? 36 : len(message) > 14 ? 42 : 50
-  // 视频模式：横幅区域内只播视频，不叠加任何文字 / 遮罩 / 落款
+  // 视频模式：本条横幅区域内只播视频，不叠加任何文字 / 遮罩 / 落款
   const bannerVideo = welcome.bg_mode === 'video' ? welcome.video_url || '' : ''
   if (bannerVideo) {
     return (
@@ -520,9 +522,8 @@ export default function Display() {
   const images = data?.images || []
   const interval = Math.max(3, data?.carousel_interval || 5)
   const welcome = data?.welcome || {}
-  // 视频整屏独占：页面上不渲染任何其他元素（时钟、房态卡片、轮播全部隐藏）
+  // 视频模式：只在横幅区（原酒店照片位）循环播放，页面其余部分照常渲染
   const videoUrl = welcome.bg_mode === 'video' ? welcome.video_url || '' : ''
-  const videoFullscreen = welcome.video_fullscreen !== false
 
   useEffect(() => {
     if (images.length === 0) return
@@ -534,33 +535,17 @@ export default function Display() {
     })
   }, [images])
 
-  // 轮播仅在无欢迎致辞时运行
+  // 轮播仅在既无欢迎致辞、也无视频时运行
   useEffect(() => {
-    if (images.length === 0 || welcome.enabled) return
+    if (images.length === 0 || welcome.enabled || videoUrl) return
     const timer = setInterval(() => {
       setCarouselIndex((i) => (i + 1) % images.length)
     }, interval * 1000)
     return () => clearInterval(timer)
-  }, [images, interval, welcome.enabled])
+  }, [images, interval, welcome.enabled, videoUrl])
 
   if (!data) {
     return <div className="h-full w-full bg-black" />
-  }
-
-  if (videoUrl && videoFullscreen) {
-    return (
-      <div className="h-full w-full bg-black overflow-hidden">
-        <video
-          src={videoUrl}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="w-full h-full object-cover"
-        />
-      </div>
-    )
   }
 
   return (
@@ -673,7 +658,7 @@ export default function Display() {
 
             {/* 横版图片轮播（16:9 条幅）—— 欢迎致辞优先 */}
             <div className="relative mx-10 mt-5 h-[565px] shrink-0 rounded-2xl overflow-hidden bg-black/20">
-              {welcome.enabled ? (
+              {welcome.enabled || videoUrl ? (
                 <WelcomeBanner welcome={welcome} hotelName={data.hotel_name} themeCss={(THEMES[data.theme] || THEMES.navy).css} />
               ) : images.length === 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -685,8 +670,10 @@ export default function Display() {
               ) : (
                 <Carousel images={images} index={carouselIndex} />
               )}
-              {/* 顶部渐变：让大图与头部平滑过渡，裁切处不显生硬 */}
-              <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-10" />
+              {/* 顶部渐变：让大图与头部平滑过渡，裁切处不显生硬（视频模式不加，避免叠在视频上） */}
+              {!videoUrl && (
+                <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-10" />
+              )}
             </div>
 
             {/* 房价牌区域（防烧屏位移）：标题固定，房型列表 flex-1 自适应填充剩余空间 */}
