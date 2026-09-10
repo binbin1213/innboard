@@ -21,6 +21,19 @@ def _px(value) -> int:
         return 0
 
 
+def _bg_mode(value) -> str:
+    """背景类型：video = 整屏只播视频；其余一律按 image（图片/渐变 + 文字）。"""
+    return "video" if str(value or "").strip().lower() == "video" else "image"
+
+
+def _video_url(db: Session) -> str:
+    """只在视频模式下下发视频地址，大屏据此决定是否整屏独占。"""
+    if _bg_mode(get_setting(db, "welcome_bg_mode")) != "video":
+        return ""
+    name = get_setting(db, "welcome_video_filename")
+    return f"/uploads/{name}" if name else ""
+
+
 def get_welcome(db: Session) -> dict:
     """欢迎致辞配置：enabled 含到期自动失效判断（到期自动恢复图片轮播）。"""
     enabled = get_setting(db, "welcome_enabled") == "1"
@@ -41,6 +54,9 @@ def get_welcome(db: Session) -> dict:
         "title_font": _px(get_setting(db, "welcome_title_font")),
         "subtitle_font": _px(get_setting(db, "welcome_subtitle_font")),
         "image_url": f"/uploads/{image}" if image else "",
+        "bg_mode": _bg_mode(get_setting(db, "welcome_bg_mode")),
+        "video_url": _video_url(db),
+        "video_fullscreen": get_setting(db, "welcome_video_fullscreen") != "0",
         "end_time": end_time,
     }
 

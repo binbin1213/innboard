@@ -364,6 +364,23 @@ function WelcomeBanner({ welcome, hotelName, themeCss }) {
   const subtitleFont =
     px(welcome.subtitle_font) || (len(subtitle) > 12 ? 68 : len(subtitle) > 8 ? 80 : 96)
   const messageFont = len(message) > 24 ? 36 : len(message) > 14 ? 42 : 50
+  // 视频模式：横幅区域内只播视频，不叠加任何文字 / 遮罩 / 落款
+  const bannerVideo = welcome.bg_mode === 'video' ? welcome.video_url || '' : ''
+  if (bannerVideo) {
+    return (
+      <div className="absolute inset-0 overflow-hidden bg-black">
+        <video
+          src={bannerVideo}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+    )
+  }
   return (
     <div className="absolute inset-0 overflow-hidden">
       {/* 背景：有图用图，无图用主题渐变 */}
@@ -503,6 +520,9 @@ export default function Display() {
   const images = data?.images || []
   const interval = Math.max(3, data?.carousel_interval || 5)
   const welcome = data?.welcome || {}
+  // 视频整屏独占：页面上不渲染任何其他元素（时钟、房态卡片、轮播全部隐藏）
+  const videoUrl = welcome.bg_mode === 'video' ? welcome.video_url || '' : ''
+  const videoFullscreen = welcome.video_fullscreen !== false
 
   useEffect(() => {
     if (images.length === 0) return
@@ -525,6 +545,22 @@ export default function Display() {
 
   if (!data) {
     return <div className="h-full w-full bg-black" />
+  }
+
+  if (videoUrl && videoFullscreen) {
+    return (
+      <div className="h-full w-full bg-black overflow-hidden">
+        <video
+          src={videoUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    )
   }
 
   return (

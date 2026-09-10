@@ -25,6 +25,39 @@ SIZE_LIMIT = 20 * 1024 * 1024
 OPT_MAX_EDGE = 1920
 OPT_MAX_BYTES = 500 * 1024
 
+ALLOWED_VIDEO_EXT = {".mp4", ".m4v", ".mov", ".webm"}
+VIDEO_SIZE_LIMIT = 60 * 1024 * 1024
+
+
+def _validate_video(data: bytes, ext: str) -> str:
+    """按文件头校验视频真实类型，返回规范化扩展名；不合法抛 ValueError。"""
+    if ext in {".mp4", ".m4v", ".mov"}:
+        if len(data) < 12 or data[4:8] != b"ftyp":
+            raise ValueError("文件不是有效的 MP4/MOV 视频")
+        return ext if ext in {".mp4", ".m4v"} else ".mov"
+    if ext == ".webm":
+        if not data.startswith(b"\x1a\x45\xdf\xa3"):
+            raise ValueError("文件不是有效的 WebM 视频")
+        return ".webm"
+    raise ValueError("仅支持 mp4 / mov / webm 视频")
+
+
+async def save_video(file: UploadFile) -> str:
+    """保存欢迎视频：原样存盘（容器内无 ffmpeg，不做转码）。"""
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in ALLOWED_VIDEO_EXT:
+        raise HTTPException(status_code=400, detail="仅支持 mp4 / mov / webm 格式的视频")
+    data = await file.read(VIDEO_SIZE_LIMIT + 1)
+    if len(data) > VIDEO_SIZE_LIMIT:
+        raise HTTPException(status_code=400, detail="视频不能超过 60MB（建议 10-30MB 的 720p 短片）")
+    try:
+        real_ext = _validate_video(data, ext)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    filename = f"{uuid.uuid4().hex}{real_ext}"
+    (UPLOAD_DIR / filename).write_bytes(data)
+    return filename
+
 
 def _optimize_image(data: bytes, real_ext: str) -> bytes:
     """压缩上传图片（保持原格式）：gif 动画跳过；超过尺寸/体积才处理。
@@ -477,6 +510,19 @@ def _clamp_px(value, lo: int = 40, hi: int = 240) -> int:
     return 0 if v <= 0 else min(max(v, lo), hi)
 
 
+def _bg_mode(value) -> str:
+    """背景类型：video = 整屏只播视频；其余一律按 image（图片/渐变 + 文字）。"""
+    return "video" if str(value or "").strip().lower() == "video" else "image"
+
+
+def _video_url(db: Session) -> str:
+    """只在视频模式下下发视频地址，大屏据此决定是否整屏独占。"""
+    if _bg_mode(get_setting(db, "welcome_bg_mode")) != "video":
+        return ""
+    name = get_setting(db, "welcome_video_filename")
+    return f"/uploads/{name}" if name else ""
+
+
 class WelcomeBody(BaseModel):
     enabled: bool = True
     title: str = ""
@@ -485,6 +531,8 @@ class WelcomeBody(BaseModel):
     end_time: str = ""
     title_font: int = 0  # 0 = 自动（按字数分档）
     subtitle_font: int = 0
+    bg_mode: str = "image"  # image=图片/渐变+文字；video=整屏只播视频
+    video_fullscreen: bool = True
 
 
 def welcome_dict(db: Session) -> dict:
@@ -497,6 +545,9 @@ def welcome_dict(db: Session) -> dict:
         "title_font": _px_setting(db, "welcome_title_font"),
         "subtitle_font": _px_setting(db, "welcome_subtitle_font"),
         "image_url": f"/uploads/{logo}" if logo else "",
+        "bg_mode": _bg_mode(get_setting(db, "welcome_bg_mode")),
+        "video_url": _video_url(db),
+        "video_fullscreen": get_setting(db, "welcome_video_fullscreen") != "0",
         "end_time": get_setting(db, "welcome_end_time"),
         "hotel_name": get_setting(db, "hotel_name"),
     }
@@ -516,6 +567,8 @@ def update_welcome(body: WelcomeBody, db: Session = Depends(get_db), _: str = De
     set_setting(db, "welcome_end_time", body.end_time.strip())
     set_setting(db, "welcome_title_font", str(_clamp_px(body.title_font)))
     set_setting(db, "welcome_subtitle_font", str(_clamp_px(body.subtitle_font)))
+    set_setting(db, "welcome_bg_mode", _bg_mode(body.bg_mode))
+    set_setting(db, "welcome_video_fullscreen", "1" if body.video_fullscreen else "0")
     db.commit()
     return welcome_dict(db)
 
@@ -544,4 +597,33 @@ def delete_welcome_image(db: Session = Depends(get_db), _: str = Depends(require
     db.commit()
     _unlink_upload(old)
     logger.info("删除欢迎背景图")
+    return {"ok": True}
+
+
+@router.post("/welcome/video")
+async def upload_welcome_video(file: UploadFile = File(...), db: Session = Depends(get_db), _: str = Depends(require_auth)):
+    filename = await save_video(file)
+    old = get_setting(db, "welcome_video_filename")
+    try:
+        set_setting(db, "welcome_video_filename", filename)
+        set_setting(db, "welcome_bg_mode", "video")
+        db.commit()
+    except Exception:
+        db.rollback()
+        discard_upload(filename)
+        logger.exception("欢迎视频入库失败")
+        raise
+    _unlink_upload(old)
+    logger.info("更新欢迎视频: %s", filename)
+    return {"video_url": f"/uploads/{filename}"}
+
+
+@router.delete("/welcome/video")
+def delete_welcome_video(db: Session = Depends(get_db), _: str = Depends(require_auth)):
+    old = get_setting(db, "welcome_video_filename")
+    set_setting(db, "welcome_video_filename", "")
+    set_setting(db, "welcome_bg_mode", "image")
+    db.commit()
+    _unlink_upload(old)
+    logger.info("删除欢迎视频")
     return {"ok": True}

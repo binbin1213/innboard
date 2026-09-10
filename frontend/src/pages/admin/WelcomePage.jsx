@@ -12,6 +12,9 @@ export default function WelcomePage() {
   const [saved, setSaved] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const inputRef = useRef(null)
+  const videoRef = useRef(null)
+  const [videoUrl, setVideoUrl] = useState('')
+  const [uploadingVideo, setUploadingVideo] = useState(false)
   const previewRef = useRef(null)
   const [previewW, setPreviewW] = useState(0)
 
@@ -27,8 +30,11 @@ export default function WelcomePage() {
           end_time: data.end_time,
           title_font: data.title_font || 0,
           subtitle_font: data.subtitle_font || 0,
+          bg_mode: data.bg_mode || 'image',
+          video_fullscreen: data.video_fullscreen !== false,
         })
         setImageUrl(data.image_url)
+        setVideoUrl(data.video_url || '')
         setHotelName(data.hotel_name || '')
       })
       .catch((e) => setError(e.message))
@@ -96,6 +102,33 @@ export default function WelcomePage() {
   if (!form) {
     return <div className="text-gray-500">加载中…</div>
   }
+  const onUploadVideo = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingVideo(true)
+    setError('')
+    try {
+      const res = await uploadFile('/api/welcome/video', file)
+      setVideoUrl(res.video_url)
+      set('bg_mode', 'video')
+    } catch (err) {
+      setError(err.message || '视频上传失败')
+    } finally {
+      setUploadingVideo(false)
+      if (videoRef.current) videoRef.current.value = ''
+    }
+  }
+
+  const removeVideo = async () => {
+    try {
+      await api.del('/api/welcome/video')
+      setVideoUrl('')
+      set('bg_mode', 'image')
+    } catch (err) {
+      setError(err.message || '删除视频失败')
+    }
+  }
+
   const inputCls =
     'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500'
   // 与展示端一致的字号分档（未自定义时用它）
@@ -112,6 +145,7 @@ export default function WelcomePage() {
       .reduce((m, line) => Math.max(m, [...line].length * (font + spacing)), 0)
   // 预览缩放：真实横幅 1000×565 → 预览容器实测宽度的等比缩放
   const sc = previewW > 0 ? Math.min(1, previewW / 1000) : 0.6
+  const isVideo = (form.bg_mode || 'image') === 'video' && !!videoUrl
 
   return (
     <div>
@@ -252,36 +286,107 @@ export default function WelcomePage() {
           />
         </div>
 
-        {/* 背景图 */}
+        {/* 大屏背景：图片 / 视频 二选一 */}
         <div className="mb-5">
-          <label className="block text-sm text-gray-600 mb-1">背景图（选填，欢迎文字叠加显示在图片上）</label>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => inputRef.current?.click()}
-              disabled={uploading}
-              className="btn-gold"
-            >
-              {uploading ? '上传中…' : '上传背景图'}
-            </button>
-            {imageUrl && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-danger text-sm hover:text-red-700"
-              >
-                删除背景图
-              </button>
-            )}
-            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onUpload} />
+          <label className="block text-sm text-gray-600 mb-1">大屏背景</label>
+          <div className="flex flex-wrap items-center gap-5 mb-3">
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="radio"
+                className="accent-green-600"
+                checked={(form.bg_mode || 'image') !== 'video'}
+                onChange={() => set('bg_mode', 'image')}
+              />
+              图片 / 渐变 + 文字
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="radio"
+                className="accent-green-600"
+                checked={(form.bg_mode || 'image') === 'video'}
+                onChange={() => set('bg_mode', 'video')}
+              />
+              视频（整屏只播视频，不显示任何其他内容）
+            </label>
           </div>
-          <span className="text-xs text-gray-400 mt-1 inline-block">
-            支持 jpg / png / webp / gif，不超过 20MB，建议宽屏图片（如 1920×1080）
-          </span>
-          {imageUrl && (
-            <div className="mt-3">
-              <img src={imageUrl} alt="欢迎背景图" className="h-40 rounded-lg object-cover border" />
+
+          {(form.bg_mode || 'image') === 'video' ? (
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => videoRef.current?.click()}
+                  disabled={uploadingVideo}
+                  className="btn-gold"
+                >
+                  {uploadingVideo ? '上传中…' : videoUrl ? '更换视频' : '上传视频'}
+                </button>
+                {videoUrl && (
+                  <button onClick={removeVideo} className="text-danger text-sm hover:text-red-700">
+                    删除视频
+                  </button>
+                )}
+                <input
+                  ref={videoRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  className="hidden"
+                  onChange={onUploadVideo}
+                />
+              </div>
+              <label className="mt-3 flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-green-600"
+                  checked={form.video_fullscreen !== false}
+                  onChange={(e) => set('video_fullscreen', e.target.checked)}
+                />
+                整屏独占播放（隐藏时钟、房态卡片等全部内容）
+              </label>
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                建议 H.264 编码的 mp4，720p / 1080p，≤ 30MB；大屏静音循环播放。
+                <br />
+                视频模式下主标题、副标题、落款、遮罩全部不显示——只播视频。
+              </p>
+              {videoUrl && (
+                <video
+                  src={videoUrl}
+                  className="mt-3 h-40 rounded-lg border bg-black"
+                  muted
+                  loop
+                  autoPlay
+                  playsInline
+                />
+              )}
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => inputRef.current?.click()}
+                  disabled={uploading}
+                  className="btn-gold"
+                >
+                  {uploading ? '上传中…' : '上传背景图'}
+                </button>
+                {imageUrl && (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-danger text-sm hover:text-red-700"
+                  >
+                    删除背景图
+                  </button>
+                )}
+                <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onUpload} />
+              </div>
+              {imageUrl && (
+                <div className="mt-2">
+                  <img src={imageUrl} alt="欢迎背景图" className="h-40 rounded-lg object-cover border" />
+                </div>
+              )}
             </div>
           )}
         </div>
+
 
         {error && <div className="text-danger text-sm mb-3">{error}</div>}
 
@@ -296,7 +401,6 @@ export default function WelcomePage() {
           {saved && <span className="text-green-600 text-sm">已保存 ✓</span>}
         </div>
       </div>
-
       {/* 预览：按真实横幅比例缩放（真实 1000×565），字号/字距同步缩放，所见即所得 */}
       <div className="bg-white rounded-xl shadow p-6">
         <h3 className="text-sm font-medium text-gray-600 mb-3">大屏预览</h3>
@@ -306,11 +410,22 @@ export default function WelcomePage() {
               className="relative rounded-2xl overflow-hidden bg-black/20 mx-auto"
               style={{ width: Math.round(1000 * sc), height: Math.round(565 * sc) }}
             >
-              {imageUrl ? (
+              {isVideo ? (
+                <video
+                  src={videoUrl}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  muted
+                  loop
+                  autoPlay
+                  playsInline
+                />
+              ) : imageUrl ? (
                 <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-[#080f1c] via-[#0b1220] to-[#141f36]" />
               )}
+              {!isVideo && (
+                <>
               <div className="absolute inset-0 bg-black/40" />
               <div className="absolute inset-x-0 flex items-center justify-center" style={{ top: 20 * sc, gap: 20 * sc }}>
                 <span className="bg-[#D4AF37]/70" style={{ height: 2 * sc, width: 80 * sc }} />
@@ -382,6 +497,8 @@ export default function WelcomePage() {
               >
                 {hotelName || '酒店名称'}
               </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="h-56 rounded-xl overflow-hidden bg-[#0b1220] border flex items-center justify-center text-gray-400 text-sm">
