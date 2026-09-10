@@ -393,7 +393,7 @@ function WelcomeBanner({ welcome, hotelName, themeCss }) {
                 fontSize: titleFont,
                 fontWeight: 900,
                 letterSpacing: 8,
-                color: '#E8C872',
+                color: '#DE2910',
                 whiteSpace: 'pre-line',
                 textShadow: '0 4px 24px rgba(0,0,0,0.55)',
               }}
@@ -408,7 +408,7 @@ function WelcomeBanner({ welcome, hotelName, themeCss }) {
                 fontSize: subtitleFont,
                 fontWeight: 900,
                 letterSpacing: 6,
-                color: '#DE2910',
+                color: '#E8C872',
                 whiteSpace: 'pre-line',
                 textShadow: '0 3px 18px rgba(0,0,0,0.6)',
               }}
