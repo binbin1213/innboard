@@ -491,6 +491,17 @@ async def upload_qr(file: UploadFile = File(...), db: Session = Depends(get_db),
     return {"qr_url": f"/uploads/{filename}"}
 
 
+@router.delete("/settings/logo")
+def delete_logo(db: Session = Depends(get_db), _: str = Depends(require_auth)):
+    """删除酒店 LOGO：清空 Setting 并删盘上文件，展示页头部回到默认图标。"""
+    old = get_setting(db, "logo_filename")
+    set_setting(db, "logo_filename", "")
+    db.commit()
+    _unlink_upload(old)
+    logger.info("删除酒店 LOGO")
+    return {"ok": True}
+
+
 @router.delete("/settings/qr")
 def delete_qr(db: Session = Depends(get_db), _: str = Depends(require_auth)):
     """删除自助下单二维码：清空 Setting 并删盘上文件，展示页随之下架「扫码订房」。"""

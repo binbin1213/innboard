@@ -33,6 +33,7 @@ export default function SettingsPage() {
   const [confirmPwd, setConfirmPwd] = useState('')
   const [pwdMsg, setPwdMsg] = useState('')
   const [showQrConfirm, setShowQrConfirm] = useState(false)
+  const [showLogoConfirm, setShowLogoConfirm] = useState(false)
   const logoInputRef = useRef(null)
   const qrInputRef = useRef(null)
   const nav = useNavigate()
@@ -110,6 +111,17 @@ export default function SettingsPage() {
       await api.del('/api/settings/qr', true)
       setQrUrl('')
       setMessage('二维码已删除，展示页将自动隐藏「扫码订房」')
+      setTimeout(() => setMessage(''), 3000)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const removeLogo = async () => {
+    try {
+      await api.del('/api/settings/logo', true)
+      setLogoUrl('')
+      setMessage('LOGO 已删除，展示页头部将显示默认酒店图标')
       setTimeout(() => setMessage(''), 3000)
     } catch (err) {
       setError(err.message)
@@ -218,7 +230,15 @@ export default function SettingsPage() {
             上传 LOGO
           </button>
           <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={onLogo} />
+          {logoUrl && (
+            <button onClick={() => setShowLogoConfirm(true)} className="btn-danger">
+              删除 LOGO
+            </button>
+          )}
         </div>
+        <p className="text-xs text-gray-400 mt-3 mb-4">
+          点「删除 LOGO」即从展示页头部移除（图片文件同时删除），头部回到默认酒店图标，可随时重新上传。
+        </p>
         <label className="block text-sm text-gray-600 mb-1">展示尺寸（像素，40～160）</label>
         <div className="flex items-center gap-4">
           <input
@@ -338,6 +358,18 @@ export default function SettingsPage() {
           修改密码
         </button>
       </div>
+
+      <ConfirmModal
+        open={showLogoConfirm}
+        title="删除酒店 LOGO"
+        message="确定删除当前 LOGO？删除后展示页头部不再显示 LOGO，改为默认酒店图标，上传过的图片文件也会一并删除。"
+        confirmText="删除"
+        onCancel={() => setShowLogoConfirm(false)}
+        onConfirm={async () => {
+          await removeLogo()
+          setShowLogoConfirm(false)
+        }}
+      />
 
       <ConfirmModal
         open={showQrConfirm}
