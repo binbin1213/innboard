@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, clearToken, uploadFile } from '../../api'
 import { useNavigate } from 'react-router-dom'
+import ConfirmModal from '../../components/ConfirmModal'
 
 // 背景主题预设（与展示页 THEMES 保持一致）
 const THEME_OPTIONS = [
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   const [newPwd, setNewPwd] = useState('')
   const [confirmPwd, setConfirmPwd] = useState('')
   const [pwdMsg, setPwdMsg] = useState('')
+  const [showQrConfirm, setShowQrConfirm] = useState(false)
   const logoInputRef = useRef(null)
   const qrInputRef = useRef(null)
   const nav = useNavigate()
@@ -100,6 +102,17 @@ export default function SettingsPage() {
       setError(err.message)
     } finally {
       e.target.value = ''
+    }
+  }
+
+  const removeQr = async () => {
+    try {
+      await api.del('/api/settings/qr', true)
+      setQrUrl('')
+      setMessage('二维码已删除，展示页将自动隐藏「扫码订房」')
+      setTimeout(() => setMessage(''), 3000)
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -255,7 +268,15 @@ export default function SettingsPage() {
             上传二维码
           </button>
           <input ref={qrInputRef} type="file" accept="image/*" className="hidden" onChange={onQr} />
+          {qrUrl && (
+            <button onClick={() => setShowQrConfirm(true)} className="btn-danger">
+              删除二维码
+            </button>
+          )}
         </div>
+        <p className="text-xs text-gray-400 mt-3">
+          点「删除二维码」即从展示页下架（图片文件同时删除），可随时重新上传。
+        </p>
       </div>
 
       <div className="bg-white rounded-xl shadow p-6 mb-6">
@@ -317,6 +338,18 @@ export default function SettingsPage() {
           修改密码
         </button>
       </div>
+
+      <ConfirmModal
+        open={showQrConfirm}
+        title="删除自助下单二维码"
+        message="确定删除当前二维码？删除后展示页右下角不再显示「扫码订房」，上传过的图片文件也会一并删除。"
+        confirmText="删除"
+        onCancel={() => setShowQrConfirm(false)}
+        onConfirm={async () => {
+          await removeQr()
+          setShowQrConfirm(false)
+        }}
+      />
     </div>
   )
 }
